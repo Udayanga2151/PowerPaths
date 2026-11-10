@@ -35,6 +35,13 @@ async function post(body) {
 }
 
 // ---------- questions ----------
+const KIND = {
+  poll: { tag: "📊 Quick poll", btn: "Submit" },
+  opinion: { tag: "💡 Your opinion", btn: "Submit", ph: "Your idea…" },
+  ask: { tag: "🎤 Ask the expert", btn: "Send question", ph: "Your question for the resource person…" },
+};
+const minFor = (q, d) => (q.type === "poll" ? 1 : q.type === "ask" ? d.minLenAsk || 10 : d.minLen);
+
 function renderQuestions(d) {
   const box = $("questions");
   box.innerHTML = "";
@@ -42,39 +49,69 @@ function renderQuestions(d) {
     box.innerHTML = `<div class="card mute small">No open question right now. A new one is coming soon, so watch the WhatsApp community! 👀</div>`;
     return;
   }
-  d.questions.forEach((q) => {
+  const order = { poll: 0, opinion: 1, ask: 2 };
+  d.questions.slice().sort((a, b) => (order[a.type] ?? 1) - (order[b.type] ?? 1)).forEach((q) => {
+    const type = KIND[q.type] ? q.type : "opinion", K = KIND[type];
     const el = document.createElement("div");
-    el.className = "q";
-    el.innerHTML = `<span class="tag"></span><p class="text"></p>
-      <textarea placeholder="Your idea…"></textarea>
-      <div class="qfoot"><span class="count"></span><button class="btn">Submit</button></div>
+    el.className = "q q-" + type;
+    el.innerHTML = `<span class="tag"></span><p class="text"></p><div class="field"></div>
+      <div class="qfoot"><span class="count"></span><button class="btn"></button></div>
       <p class="msg"></p>`;
-    let tag = q.webinar ? `Webinar ${String(q.webinar).padStart(2, "0")}` : "Question";
+    let tag = K.tag + (q.webinar ? ` · Webinar ${String(q.webinar).padStart(2, "0")}` : "");
     if (q.closes) tag += " · Closes " + new Date(q.closes).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Colombo" });
     el.querySelector(".tag").textContent = tag;
     el.querySelector(".text").textContent = q.text;
-    const ta = el.querySelector("textarea"), btn = el.querySelector("button"), msg = el.querySelector(".msg"), cnt = el.querySelector(".count");
-    ta.maxLength = d.maxLen;
+    const field = el.querySelector(".field"), btn = el.querySelector("button"), msg = el.querySelector(".msg"), cnt = el.querySelector(".count");
     const mine = d.myAnswers && d.myAnswers[q.id];
-    if (mine) { ta.value = mine; btn.textContent = "Update"; }
-    const upd = () => (cnt.textContent = `${ta.value.trim().length} / ${d.maxLen}` + (ta.value.trim().length < d.minLen ? ` (min ${d.minLen})` : ""));
-    ta.addEventListener("input", upd); upd();
-    btn.addEventListener("click", () => submitAnswer(q, ta, btn, msg, d));
+    btn.textContent = mine ? "Update" : K.btn;
+    let get;
+    if (type === "poll") {
+      const name = "poll-" + q.id;
+      q.options.forEach((o) => {
+        const lab = document.createElement("label");
+        lab.className = "opt";
+        lab.innerHTML = `<input type="radio"><span></span>`;
+        const r = lab.querySelector("input");
+        r.name = name; r.value = o;
+        if (mine && mine.toLowerCase() === o.toLowerCase()) r.checked = true;
+        lab.querySelector("span").textContent = o;
+        field.appendChild(lab);
+      });
+      get = () => { const c = field.querySelector("input:checked"); return c ? c.value : ""; };
+    } else {
+      const ta = document.createElement("textarea");
+      ta.placeholder = K.ph; ta.maxLength = d.maxLen;
+      if (mine) ta.value = mine;
+      field.appendChild(ta);
+      const min = minFor(q, d);
+      const upd = () => (cnt.textContent = `${ta.value.trim().length} / ${d.maxLen}` + (ta.value.trim().length < min ? ` (min ${min})` : ""));
+      ta.addEventListener("input", upd); upd();
+      if (type === "ask") cnt.textContent += " · 🔒 only the team sees it";
+      get = () => ta.value.trim();
+    }
+    btn.addEventListener("click", () => submitAnswer({ q, get, btn, msg }, d));
     box.appendChild(el);
   });
 }
 
-async function submitAnswer(q, ta, btn, msg, d) {
-  const text = ta.value.trim();
+function savedText(q) {
+  return q.type === "poll" ? "✓ Saved! You can change your vote until the poll closes."
+    : q.type === "ask" ? "✓ Question sent! The team will pick questions to ask live at the webinar."
+    : "✓ Saved! You can edit it until the question closes.";
+}
+
+async function submitAnswer(p, d) {
+  const { q, get, btn, msg } = p, text = get();
   msg.className = "msg";
-  if (text.length < d.minLen) { msg.className = "msg err"; msg.textContent = `Please write at least ${d.minLen} characters.`; return; }
-  if (!state.token) { state.pending = { q, ta, btn, msg }; openSheet(); return; }   // first time on this device
+  if (q.type === "poll" && !text) { msg.className = "msg err"; msg.textContent = "Please pick an option."; return; }
+  if (q.type !== "poll" && text.length < minFor(q, d)) { msg.className = "msg err"; msg.textContent = `Please write at least ${minFor(q, d)} characters.`; return; }
+  if (!state.token) { state.pending = p; openSheet(); return; }   // first time on this device
   btn.disabled = true; msg.textContent = "Saving…";
   try {
     const r = await post({ a: "answer", t: state.token, qid: q.id, text });
-    if (r.needLogin) { store.set("pp_t", ""); state.token = null; state.pending = { q, ta, btn, msg }; openSheet(); return; }
+    if (r.needLogin) { store.set("pp_t", ""); state.token = null; state.pending = p; openSheet(); return; }
     if (!r.ok) throw new Error(r.error);
-    msg.className = "msg ok"; msg.textContent = "✓ Saved! You can edit it until the question closes.";
+    msg.className = "msg ok"; msg.textContent = savedText(q);
     btn.textContent = "Update";
     if (!r.registered) $("regnudge").classList.remove("hidden");
     refresh();
@@ -99,7 +136,7 @@ $("idform").onsubmit = async (ev) => {
   ev.preventDefault();
   const f = ev.target, p = state.pending, go = $("sheet-go"), m = $("sheet-msg");
   const guest = !$("guest-fields").classList.contains("hidden");
-  const body = { a: "answer", qid: p.q.id, text: p.ta.value.trim(), phone: f.phone.value, email: f.email.value };
+  const body = { a: "answer", qid: p.q.id, text: p.get(), phone: f.phone.value, email: f.email.value };
   if (guest) {
     body.name = f.name.value.trim();
     body.uni = f.uni.value === "__other" ? f.uniOther.value.trim() : f.uni.value;
@@ -121,7 +158,7 @@ $("idform").onsubmit = async (ev) => {
     if (!r.ok) throw new Error(r.error);
     store.set("pp_t", r.token); state.token = r.token;
     $("sheet").classList.add("hidden");
-    p.msg.className = "msg ok"; p.msg.textContent = "✓ Saved! You can edit it until the question closes."; p.btn.textContent = "Update";
+    p.msg.className = "msg ok"; p.msg.textContent = savedText(p.q); p.btn.textContent = "Update";
     if (!r.registered) $("regnudge").classList.remove("hidden");
     refresh();
   } catch (e) { m.className = "msg err"; m.textContent = e.message || "Something went wrong. Try again."; }
@@ -168,13 +205,16 @@ function renderBoard(d) {
   d.top.forEach((r) => st.appendChild(li(r.rank, r.name, `${r.uni} · ${r.answers} answers · ${r.visits} invites`, r.points)));
   d.unis.forEach((u) => un.appendChild(li(u.rank, u.uni, `${u.students} registered`, u.points)));
   const P = d.points;
-  $("rules").innerHTML = `<li>Answer a question: <b>${P.answer}</b></li>
-    <li>Each ⭐ the team gives your answer: <b>${P.star}</b> (up to 5 ⭐)</li>
-    <li>Picked as the best idea by the resource person: <b>+${P.best}</b></li>
+  $("rules").innerHTML = `<li>Register for PowerPaths: <b>${P.register}</b></li>
+    <li>Answer a quick poll: <b>${P.poll}</b> (+${P.pollCorrect} if you're right)</li>
+    <li>Share your opinion: <b>${P.opinion}</b>, plus <b>${P.star}</b> for each ⭐ the team gives it (up to 5 ⭐)</li>
+    <li>Your opinion picked as a best idea: <b>+${P.best}</b></li>
+    <li>Ask the resource person a question: <b>${P.ask}</b> (+${P.askPicked} if it's picked for the webinar)</li>
     <li>Each person who opens your invite link: <b>${P.visit}</b></li>
     <li>…and if they then register for PowerPaths: <b>+${P.join}</b> more</li>
     <li>Your university's score is the total of all its students.</li>
-    <li>Not registered yet? Your reviewed answers (⭐1 or more) still count for your university.</li>`;
+    <li>Not registered yet? Your answers the team rates ⭐1 or more still count for your university.</li>
+    <li>Spam or off-topic answers get 0 ⭐ and no points.</li>`;
   const sel = $("uni-select");
   sel.innerHTML = `<option value="">Select…</option>` + d.unisList.map((u) => `<option></option>`).join("") + `<option value="__other">Other</option>`;
   d.unisList.forEach((u, i) => { sel.options[i + 1].value = u; sel.options[i + 1].textContent = u; });

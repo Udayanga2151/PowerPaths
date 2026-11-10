@@ -94,3 +94,11 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .note{font-size:14px;background:rgba(57,181,74,.12);border:1px solid rgba(57,181,74,.35);border-radius:12px;padding:10px;margin:4px 0}
 .privacy{font-size:12px;color:var(--mute);text-align:center}
 .bigemoji{font-size:44px}
+/* question types */
+.q-ask{border-color:rgba(91,224,116,.25)}
+.q-ask textarea{min-height:80px}
+.opt{display:flex;align-items:center;gap:10px;padding:12px 14px;margin:8px 0;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.25);cursor:pointer;font-weight:500}
+.opt input{width:20px;height:20px;margin:0;padding:0;accent-color:var(--green);flex:none}
+.opt:has(input:checked){border-color:var(--green);background:rgba(57,181,74,.14)}
+.opt input:focus{outline:none}
+.qfoot .btn{white-space:nowrap}

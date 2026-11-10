@@ -69,17 +69,17 @@ ok(!r.top.some(x => x.name.startsWith('Guest')), 'guest not on leaderboard');
 // guest registers later with same number
 env.sheets['Form Responses 1'].data.push([new Date(Date.now() + 1000), 'guest@example.com', 'Guest Person', 'guest@example.com', '0709998888', 'University Of Jaffna', 'No', 'Friend', '']);
 r = get(guestToken);
-ok(r.me && r.me.registered && r.me.points === 5, 'after registering, guest answer counts (5 pts)');
+ok(r.me && r.me.registered && r.me.points === 10 + 5, 'after registering, guest answer counts (10 register + 5): ' + r.me.points);
 
 // stars + best
 env.sheets['Answers'].data[1][8] = 4; env.sheets['Answers'].data[1][9] = true;
 r = get(kasun.token);
-ok(r.me.points === 5 + 16 + 50 + 2 + 10, 'kasun points = answer5 + stars16 + best50 + 2 visits + 1 join(10) => ' + r.me.points);
+ok(r.me.points === 10 + 5 + 16 + 50 + 2 + 10, 'kasun points = register10 + answer5 + stars16 + best50 + 2 visits + 1 join(10) => ' + r.me.points);
 ok(r.me.visits === 2 && r.me.joins === 1, 'Nimali (registered before click) = visit only; guest who registered after = visit + join');
 ok(r.top[0].name === 'Kasun P.', 'short name on leaderboard: ' + r.top[0].name);
 env.sheets['Answers'].data[1][8] = 0;
 r = get(kasun.token);
-ok(r.me.points === 12, 'spam (0 stars) => only invite points: ' + r.me.points);
+ok(r.me.points === 22, 'spam (0 stars) => register + invite points: ' + r.me.points);
 ok(r.unis[0].uni === 'University Of Ruhuna', 'university ranking');
 // not-registered answer → university points only after ⭐1+
 post({ a: 'answer', phone: '0701112233', email: 'g2@example.com', name: 'Guest Two', uni: 'University Of Kelaniya', qid: '1', text: 'Community solar farms owned by villages.' });
@@ -94,6 +94,49 @@ ok(!r.top.some(x => x.name.startsWith('Guest T')), 'guest still not on student l
 env.sheets['Answers'].data[gi][8] = 0;
 r = get('');
 ok(!(r.unis.find(u => u.uni === 'University Of Kelaniya') || {}).points, 'guest spam (⭐0): no university points');
+
+// ---- question types: poll + ask ----
+const Qs = env.sheets['Questions'].data;
+ok(Qs[0].slice(6, 9).join(',') === 'Type,Options,Correct', 'Questions tab has Type/Options/Correct columns');
+Qs.push([10, 1, 'Which source made most of our electricity in 2025?', true, '', '', 'poll', 'Hydro | Coal | Solar', 'Coal']);
+Qs.push([11, 1, 'Poll without right answer', true, '', '', 'poll', 'Yes | No', '']);
+Qs.push([12, 1, 'Ask the resource person', true, '', '', 'ask']);
+Qs.push([13, 1, 'Broken poll (1 option)', true, '', '', 'poll', 'Only', '']);
+r = get('');
+const pq = r.questions.find(q => q.id === '10');
+ok(pq && pq.type === 'poll' && pq.options.join(',') === 'Hydro,Coal,Solar', 'poll sent with options');
+ok(!JSON.stringify(r.questions).includes('"correct"'), 'right answer NOT sent to the site');
+ok(!r.questions.find(q => q.id === '13'), 'poll with <2 options hidden');
+ok(r.questions.find(q => q.id === '1').type === 'opinion', 'empty Type = opinion');
+const amal = M.list.find(m => m.name === 'Amal Fernando');
+let base = get(amal.token).me.points;
+ok(base === 10, 'registered, nothing done = 10: ' + base);
+r = post({ a: 'answer', t: amal.token, qid: '10', text: 'Wind' });
+ok(!r.ok, 'poll: answer not in options rejected');
+r = post({ a: 'answer', t: amal.token, qid: '10', text: 'hydro' });
+ok(r.ok && get(amal.token).me.points === 12, 'poll wrong answer = +2');
+r = post({ a: 'answer', t: amal.token, qid: '10', text: 'Coal' });
+ok(r.ok && get(amal.token).me.points === 15, 'poll changed to right answer = +2+3');
+ok(env.sheets['Answers'].data.filter(x => x[3] === amal.token && x[2] === 10 || x[3] === amal.token && x[2] === '10').length === 1, 'poll change updates same row');
+Qs[Qs.length - 4][8] = 3;   // team writes Correct as a number
+ok(get(amal.token).me.points === 12, 'Correct as number (3 = Solar) works');
+Qs[Qs.length - 4][8] = 'Coal';
+post({ a: 'answer', t: amal.token, qid: '11', text: 'Yes' });
+ok(get(amal.token).me.points === 17, 'poll with no right answer = +2 only');
+r = post({ a: 'answer', t: amal.token, qid: '12', text: 'short' });
+ok(!r.ok, 'ask: too short rejected');
+r = post({ a: 'answer', t: amal.token, qid: '12', text: 'How will EGL buy solar power?' });
+ok(r.ok && get(amal.token).me.points === 20, 'ask = +3');
+const ai = env.sheets['Answers'].data.findIndex(x => x[3] === amal.token && String(x[2]) === '12');
+ok(env.sheets['Answers'].data[ai][10] === 'ask', 'Answers row has Type = ask');
+env.sheets['Answers'].data[ai][9] = true;
+ok(get(amal.token).me.points === 40, 'ask picked for webinar = +20');
+env.sheets['Answers'].data[ai][8] = 0;
+ok(get(amal.token).me.points === 17, 'ask marked spam (0 stars) = 0');
+r = get('');
+ok(r.top.every(x => x.points > 10), 'leaderboard only shows people who did something');
+const rua = r.unis.find(u => u.uni === 'University Of Ruhuna');
+ok(rua.points >= 20 && rua.students === 2, 'university total includes register points of each student: ' + rua.points);
 
 // registrants + emails
 const W = () => env.sheets['Registrants'].data;

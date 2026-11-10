@@ -3,7 +3,9 @@ const http = require('http'), fs = require('fs'), path = require('path');
 const { load } = require('./mock-gas');
 const env = load(require('./seed')());
 env.ctx.setup();
-env.sheets['Questions'].data.push([1, 1, 'Sri Lanka wants 70% renewable electricity. What creative idea would help us get there faster?', true]);
+env.sheets['Questions'].data.push([1, 1, 'Sri Lanka wants 70% renewable electricity. What creative idea would help us get there faster?', true, '', '', 'opinion']);
+env.sheets['Questions'].data.push([2, 1, 'Which source generated the most electricity in Sri Lanka in 2025?', true, '', '', 'poll', 'Hydro | Coal | Solar | Wind', 'Coal']);
+env.sheets['Questions'].data.push([3, 1, 'What would you like to ask the resource person about Electricity Generation Lanka?', true, '', '', 'ask']);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2' };
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
