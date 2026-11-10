@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PowerPaths 2.0 · Webinar Series</title>
+  <meta name="description" content="A four-part IEEE PES webinar series on the restructuring of the CEB and the future of Sri Lanka's electricity sector. Answer daily questions and climb the leaderboard.">
+  <meta property="og:title" content="PowerPaths 2.0 · Webinar Series">
+  <meta property="og:description" content="Answer the daily question, share your ideas with industry experts and climb the leaderboard. ⚡">
+  <meta property="og:image" content="https://powerpaths.pages.dev/og.png">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#030807">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+  <!-- HERO -->
+  <header class="hero">
+    <p class="eyebrow">IEEE PES · Webinar Series</p>
+    <img src="logo.png" alt="PowerPaths 2.0" class="logo">
+    <p id="hello" class="hello hidden"></p>
+    <p id="invited" class="invited hidden">⚡ A friend invited you to PowerPaths 2.0!</p>
+    <h1>Sri Lanka's power sector is changing.<br><span>Be part of the conversation.</span></h1>
+    <p class="lead">A four-part webinar series on the restructuring of the Ceylon Electricity Board (CEB) into four entities, and the future of Sri Lanka's electricity sector.</p>
+    <div class="cta">
+      <a class="btn big reg-link" target="_blank" rel="noopener" id="hero-reg">Register free</a>
+      <a class="btn big ghost community-link" target="_blank" rel="noopener">Join WhatsApp community</a>
+    </div>
+    <p class="next">🗓️ <b>Webinar 01</b> · Sunday, 15 November</p>
+  </header>
+
+  <main>
+    <!-- DAILY QUESTION -->
+    <section id="qsec">
+      <h2 class="title">💡 Today's Question</h2>
+      <p class="mute small">Share your own idea. The team picks the best ones for the resource person to review live during the webinar.</p>
+      <div id="questions"><div class="card skeleton">Loading…</div></div>
+    </section>
+
+    <!-- INVITE (registered + logged in only) -->
+    <section id="invite" class="card hidden">
+      <h2>🤝 Invite your friends</h2>
+      <p class="mute small">Share your link. You get <b id="ref-pts">1</b> point for every person who opens it, and <b id="join-pts">10</b> more when they register for PowerPaths.</p>
+      <div class="row"><input id="ref-link" readonly aria-label="Your invite link"><button id="copy-btn" class="btn ghost">Copy</button></div>
+      <a id="wa-share" class="btn wide" target="_blank" rel="noopener">Share on WhatsApp</a>
+    </section>
+
+    <!-- LEADERBOARD -->
+    <section id="board">
+      <h2 class="title">🏆 Leaderboard</h2>
+      <div id="me-card" class="card me hidden">
+        <div><span class="big-rank" id="me-rank">#–</span><span class="mute small" id="me-of"></span></div>
+        <div class="stats">
+          <div><b id="me-points">0</b><span>points</span></div>
+          <div><b id="me-refs">0</b><span>invites</span></div>
+          <div><b id="me-ans">0</b><span>answers</span></div>
+        </div>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="students">Students</button>
+        <button class="tab" data-tab="unis">Universities</button>
+      </div>
+      <ol id="students" class="ranks"><li class="mute small">Loading…</li></ol>
+      <ol id="unis" class="ranks hidden"></ol>
+      <details class="rules"><summary>How do I get points?</summary><ul id="rules"></ul></details>
+    </section>
+
+    <!-- ABOUT + WEBINARS -->
+    <section>
+      <h2 class="title">⚡ The Series</h2>
+      <p class="mute">Under the new Electricity Act, the CEB is being restructured into four separate entities. Each webinar takes one of them, with an industry expert explaining how it works and what it means for the next generation of engineers.</p>
+      <div class="webinars">
+        <article class="w live"><div class="wtop"><span class="num">01</span><span class="date">Sun · 15 Nov</span></div>
+          <span class="abbr">EGL</span><h3>Electricity Generation Lanka</h3>
+          <p>How Sri Lanka produces its electricity: hydro, thermal and the fast-growing renewables, and the role of generation companies in the new structure.</p></article>
+        <article class="w"><div class="wtop"><span class="num">02</span><span class="date">Date TBA</span></div>
+          <span class="abbr">NTNSP</span><h3>National Transmission Network Service Provider</h3>
+          <p>The high-voltage backbone that carries power from the plants across the country, and how it must grow for a renewable future.</p></article>
+        <article class="w"><div class="wtop"><span class="num">03</span><span class="date">Date TBA</span></div>
+          <span class="abbr">EDL</span><h3>Electricity Distribution Lanka</h3>
+          <p>From the substation to homes and industries: how power reaches every customer, and how rooftop solar is changing the network.</p></article>
+        <article class="w"><div class="wtop"><span class="num">04</span><span class="date">Date TBA</span></div>
+          <span class="abbr">NSO</span><h3>National System Operator</h3>
+          <p>The control room of the nation: balancing supply and demand every second to keep the whole grid stable.</p></article>
+      </div>
+      <a class="btn wide reg-link" target="_blank" rel="noopener">Register for the series</a>
+    </section>
+
+    <!-- ORGANISERS -->
+    <section class="card org">
+      <p class="mute small">Organized by</p>
+      <p><b>IEEE Power &amp; Energy Society (PES) Student Branch Chapter, University of Ruhuna</b><br><span class="mute">in collaboration with IEEE PES Sri Lanka Section</span></p>
+      <p class="mute small">Open to undergraduates, engineering students, industry professionals and anyone interested in Sri Lanka's power and energy sector.</p>
+      <div class="contacts">
+        <div><b>Kavindu Samaraweera</b><span>Chairman · PowerPaths 2.0</span><a href="tel:+94773319085">+94 77 331 9085</a></div>
+        <div><b>Thanuja Rathnayaka</b><span>Programme Team Lead</span><a href="tel:+94716527778">+94 71 652 7778</a></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">PowerPaths 2.0 · IEEE PES · University of Ruhuna</footer>
+
+  <!-- "Who are you?" sheet, shown once per device -->
+  <div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <form id="idform" class="sheet-box" novalidate>
+      <button type="button" class="x" id="sheet-close" aria-label="Close">✕</button>
+      <h2 id="sheet-title">Almost there!</h2>
+      <p class="mute small" id="sheet-sub">Enter the WhatsApp number and email you registered with. We'll remember you on this device.</p>
+      <label>WhatsApp number<input name="phone" type="tel" inputmode="tel" placeholder="07X XXX XXXX" autocomplete="tel" required></label>
+      <label>Email<input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
+      <div id="guest-fields" class="hidden">
+        <p class="note">Looks like you haven't registered yet. No problem, we'll save your answer! Tell us who you are:</p>
+        <label>Full name<input name="name" autocomplete="name"></label>
+        <label>University<select name="uni" id="uni-select"></select></label>
+        <input name="uniOther" id="uni-other" class="hidden" placeholder="Your university / workplace">
+      </div>
+      <p class="msg" id="sheet-msg"></p>
+      <button class="btn wide" id="sheet-go">Submit my answer</button>
+      <p class="privacy">🔒 Your number and email are never shown on the site.</p>
+    </form>
+  </div>
+
+  <!-- After a guest answer -->
+  <div id="regnudge" class="sheet hidden" role="dialog" aria-modal="true">
+    <div class="sheet-box center">
+      <button type="button" class="x" data-close aria-label="Close">✕</button>
+      <div class="bigemoji">✅</div>
+      <h2>Your answer is saved!</h2>
+      <p class="mute">Register for PowerPaths 2.0 with the <b>same WhatsApp number</b> to join the webinar and get your points on the leaderboard.</p>
+      <a class="btn wide reg-link" target="_blank" rel="noopener">Register free →</a>
+      <a class="btn wide ghost community-link" target="_blank" rel="noopener">Join WhatsApp community</a>
+    </div>
+  </div>
+
+  <script src="config.js?v=1"></script>
+  <script src="app.js?v=1"></script>
+</body>
+</html>
