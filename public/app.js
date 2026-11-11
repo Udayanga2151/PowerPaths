@@ -363,14 +363,11 @@ function renderBoard(d) {
   const P = d.points;
   $("rules").innerHTML = `<li>Register for PowerPaths: <b>${P.register}</b></li>
     <li>Answer a quiz question: <b>${P.poll}</b> (+${P.pollCorrect} more if you're right)</li>
-    <li>Share your opinion: <b>${P.opinion}</b>, plus <b>${P.star}</b> for each ⭐ the team gives it (up to 5 ⭐)</li>
-    <li>Your opinion picked as a best idea: <b>+${P.best}</b></li>
     <li>Ask the resource person a question: <b>${P.ask}</b> (+${P.askPicked} if it's picked for the webinar)</li>
     <li>Each person who opens your invite link: <b>${P.visit}</b></li>
     <li>…and if they then register for PowerPaths: <b>+${P.join}</b> more</li>
     <li>Your university's score is the total of all its students.</li>
-    <li>Not registered yet? Your answers the team rates ⭐1 or more still count for your university.</li>
-    <li>Spam or off-topic answers get 0 ⭐ and no points.</li>`;
+    <li>Spam or off-topic questions get no points.</li>`;
   const sel = $("uni-select");
   sel.innerHTML = `<option value="">Select…</option>` + d.unisList.map((u) => `<option></option>`).join("") + `<option value="__other">Other</option>`;
   d.unisList.forEach((u, i) => { sel.options[i + 1].value = u; sel.options[i + 1].textContent = u; });
