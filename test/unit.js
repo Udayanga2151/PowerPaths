@@ -189,3 +189,8 @@ env.sheets['Form Responses 1'].data.push([new Date(), 'new@example.com', 'New On
 g.onFormSubmit({ namedValues: { 'WhatsApp / Mobile Number': ['0712223333'] } });
 ok(env.mail.length === 5 && W()[5][0] === 'PP2-005' && W()[5][6], 'form submit => new row PP2-005 + auto email');
 console.log('WhatsApp link length:', W()[1][7].length);
+require('vm').runInContext('CONFIG.TOP_STUDENTS = 1', g);
+const tb = get('');
+ok(tb.top.length === 1, 'leaderboard shows only TOP_STUDENTS students: ' + tb.top.length);
+ok(tb.unis.length >= 2, 'universities: all shown');
+require('vm').runInContext('CONFIG.TOP_STUDENTS = 10', g);

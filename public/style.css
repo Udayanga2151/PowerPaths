@@ -62,7 +62,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .ranks .who span{font-size:12px;color:var(--mute)}
 .ranks .pts{font-weight:700;flex:none}
 .ranks li.t1{border-color:var(--gold)}.ranks li.t2{border-color:#c9d1d6}.ranks li.t3{border-color:#c98a4d}
-.rules{margin-top:12px;font-size:14px;color:var(--mute)}
+.rules{margin:12px 0 14px;font-size:14px;color:var(--mute)}
 .rules summary{cursor:pointer;color:var(--green2)}
 .rules ul{margin:8px 0 0 18px}
 /* webinars */
