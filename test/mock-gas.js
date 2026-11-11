@@ -37,6 +37,7 @@ function load(seed) {
   Object.entries(seed).forEach(([n, rows]) => (sheets[n] = makeSheet(n, rows)));
   const props = {};
   const mail = [];
+  const cache = {};
   const ss = {
     getSheetByName: (n) => sheets[n] || null,
     insertSheet: (n) => (sheets[n] = makeSheet(n, [])),
@@ -55,10 +56,11 @@ function load(seed) {
     MailApp: { getRemainingDailyQuota: () => 100, sendEmail: (o) => mail.push(o) },
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ forSpreadsheet: () => ({ onFormSubmit: () => ({ create() {} }) }) }) },
     Logger: { log: () => {} },
+    CacheService: { getScriptCache: () => ({ get: (k) => (cache[k] || null), put: (k, v) => (cache[k] = v), remove: (k) => delete cache[k] }) },
     Session: { getActiveUser: () => ({ getEmail: () => 'me@example.com' }) },
   };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../apps-script/Code.gs'), 'utf8'), ctx);
-  return { ctx, sheets, mail };
+  return { ctx, sheets, mail, cache };
 }
 module.exports = { load };

@@ -6,6 +6,8 @@ env.ctx.setup();
 env.sheets['Questions'].data.push([1, 1, 'Sri Lanka wants 70% renewable electricity. What creative idea would help us get there faster?', true, '', '', 'opinion']);
 env.sheets['Questions'].data.push([2, 1, 'Which source generated the most electricity in Sri Lanka in 2025?', true, '', '', 'poll', 'Hydro | Coal | Solar | Wind', 'Coal']);
 env.sheets['Questions'].data.push([3, 1, 'What would you like to ask the resource person about Electricity Generation Lanka?', true, '', '', 'ask']);
+const H = 3600e3;
+env.sheets['Questions'].data.push([4, 1, 'Which is the largest hydro power station in Sri Lanka?', true, new Date(Date.now() - 30 * H), new Date(Date.now() - 6 * H), 'poll', 'Victoria | Kotmale | Samanala', 'Victoria']);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2' };
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');

@@ -35,88 +35,175 @@ async function post(body) {
 }
 
 // ---------- questions ----------
+// Poll + opinion questions share ONE "Submit my answers" button. "Ask the expert" questions have their own button.
 const KIND = {
-  poll: { tag: "📊 Quick poll", btn: "Submit" },
-  opinion: { tag: "💡 Your opinion", btn: "Submit", ph: "Your idea…" },
-  ask: { tag: "🎤 Ask the expert", btn: "Send question", ph: "Your question for the resource person…" },
+  poll: { tag: "📊 Quick poll" },
+  opinion: { tag: "💡 Your opinion", ph: "Your idea…" },
+  ask: { tag: "🎤 Ask the expert", ph: "Your question for the resource person…" },
 };
-const minFor = (q, d) => (q.type === "poll" ? 1 : q.type === "ask" ? d.minLenAsk || 10 : d.minLen);
+const minFor = (q, d) => (q.type === "ask" ? d.minLenAsk || 10 : d.minLen);
+const saved = {};   // what is already saved for each question (so unchanged answers are not sent again)
+const fmtClose = (iso) => new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Colombo" });
+
+/** One question block (tag, text, input). Returns {q, get, msg, el}. */
+function questionBlock(q, d) {
+  const type = KIND[q.type] ? q.type : "opinion", K = KIND[type];
+  const el = document.createElement("div");
+  el.className = "qi q-" + type;
+  el.innerHTML = `<span class="tag"></span><p class="text"></p><div class="field"></div><p class="msg"></p>`;
+  let tag = K.tag + (q.webinar ? ` · Webinar ${String(q.webinar).padStart(2, "0")}` : "");
+  if (q.closes) tag += " · Closes " + fmtClose(q.closes);
+  el.querySelector(".tag").textContent = tag;
+  el.querySelector(".text").textContent = q.text;
+  const field = el.querySelector(".field"), msg = el.querySelector(".msg");
+  const mine = d.myAnswers && d.myAnswers[q.id];
+  if (mine) saved[q.id] = mine;
+  let get;
+  if (type === "poll") {
+    q.options.forEach((o) => {
+      const lab = document.createElement("label");
+      lab.className = "opt";
+      lab.innerHTML = `<input type="radio"><span></span>`;
+      const r = lab.querySelector("input");
+      r.name = "poll-" + q.id; r.value = o;
+      if (mine && mine.toLowerCase() === o.toLowerCase()) r.checked = true;
+      lab.querySelector("span").textContent = o;
+      field.appendChild(lab);
+    });
+    get = () => { const c = field.querySelector("input:checked"); return c ? c.value : ""; };
+  } else {
+    const ta = document.createElement("textarea");
+    ta.placeholder = K.ph; ta.maxLength = d.maxLen;
+    if (mine) ta.value = mine;
+    const cnt = document.createElement("span");
+    cnt.className = "count";
+    field.append(ta, cnt);
+    const min = minFor(q, d);
+    const upd = () => (cnt.textContent = `${ta.value.trim().length} / ${d.maxLen}` + (ta.value.trim().length < min ? ` (min ${min})` : "") + (type === "ask" ? " · 🔒 only the team sees it" : ""));
+    ta.addEventListener("input", upd); upd();
+    get = () => ta.value.trim();
+  }
+  if (mine) { msg.className = "msg ok"; msg.textContent = "✓ Saved"; }
+  return { q, get, msg, el };
+}
 
 function renderQuestions(d) {
   const box = $("questions");
   box.innerHTML = "";
+  renderClosedPolls(d);
   if (!d.questions.length) {
     box.innerHTML = `<div class="card mute small">No open question right now. A new one is coming soon, so watch the WhatsApp community! 👀</div>`;
     return;
   }
-  const order = { poll: 0, opinion: 1, ask: 2 };
-  d.questions.slice().sort((a, b) => (order[a.type] ?? 1) - (order[b.type] ?? 1)).forEach((q) => {
-    const type = KIND[q.type] ? q.type : "opinion", K = KIND[type];
-    const el = document.createElement("div");
-    el.className = "q q-" + type;
-    el.innerHTML = `<span class="tag"></span><p class="text"></p><div class="field"></div>
-      <div class="qfoot"><span class="count"></span><button class="btn"></button></div>
-      <p class="msg"></p>`;
-    let tag = K.tag + (q.webinar ? ` · Webinar ${String(q.webinar).padStart(2, "0")}` : "");
-    if (q.closes) tag += " · Closes " + new Date(q.closes).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Colombo" });
-    el.querySelector(".tag").textContent = tag;
-    el.querySelector(".text").textContent = q.text;
-    const field = el.querySelector(".field"), btn = el.querySelector("button"), msg = el.querySelector(".msg"), cnt = el.querySelector(".count");
-    const mine = d.myAnswers && d.myAnswers[q.id];
-    btn.textContent = mine ? "Update" : K.btn;
-    let get;
-    if (type === "poll") {
-      const name = "poll-" + q.id;
-      q.options.forEach((o) => {
-        const lab = document.createElement("label");
-        lab.className = "opt";
-        lab.innerHTML = `<input type="radio"><span></span>`;
-        const r = lab.querySelector("input");
-        r.name = name; r.value = o;
-        if (mine && mine.toLowerCase() === o.toLowerCase()) r.checked = true;
-        lab.querySelector("span").textContent = o;
-        field.appendChild(lab);
-      });
-      get = () => { const c = field.querySelector("input:checked"); return c ? c.value : ""; };
-    } else {
-      const ta = document.createElement("textarea");
-      ta.placeholder = K.ph; ta.maxLength = d.maxLen;
-      if (mine) ta.value = mine;
-      field.appendChild(ta);
-      const min = minFor(q, d);
-      const upd = () => (cnt.textContent = `${ta.value.trim().length} / ${d.maxLen}` + (ta.value.trim().length < min ? ` (min ${min})` : ""));
-      ta.addEventListener("input", upd); upd();
-      if (type === "ask") cnt.textContent += " · 🔒 only the team sees it";
-      get = () => ta.value.trim();
+  const main = d.questions.filter((q) => q.type !== "ask").sort((a, b) => (a.type === "poll" ? 0 : 1) - (b.type === "poll" ? 0 : 1));
+  const asks = d.questions.filter((q) => q.type === "ask");
+  if (main.length) box.appendChild(questionCard(main, d, "Submit my answers"));
+  asks.forEach((q) => box.appendChild(questionCard([q], d, "Send question")));
+}
+
+/** A card with one or more questions and ONE button. */
+function questionCard(list, d, label) {
+  const card = document.createElement("div");
+  card.className = "q" + (list.length === 1 && list[0].type === "ask" ? " q-ask-card" : " q-main");
+  const items = list.map((q) => questionBlock(q, d));
+  items.forEach((it) => card.appendChild(it.el));
+  const foot = document.createElement("div");
+  foot.className = "qfoot";
+  foot.innerHTML = `<p class="msg"></p><button class="btn"></button>`;
+  const btn = foot.querySelector("button"), msg = foot.querySelector(".msg");
+  btn.textContent = items.every((it) => saved[it.q.id]) ? "Update" : label;
+  card.appendChild(foot);
+  btn.addEventListener("click", () => submitCard({ items, btn, msg }, d));
+  return card;
+}
+
+/** Check what is filled in. Returns the answers to send, or null if nothing can be sent. */
+function collect(job, d) {
+  const send = [];
+  job.msg.className = "msg"; job.msg.textContent = "";
+  job.items.forEach((it) => {
+    const v = it.get();
+    if (!(it.msg.className.includes("ok") && saved[it.q.id] === v)) { it.msg.className = "msg"; it.msg.textContent = ""; }
+    if (!v || saved[it.q.id] === v) return;                       // empty or unchanged: skip
+    if (it.q.type !== "poll" && v.length < minFor(it.q, d)) {
+      it.msg.className = "msg err"; it.msg.textContent = `Please write at least ${minFor(it.q, d)} characters.`;
+      return;
     }
-    btn.addEventListener("click", () => submitAnswer({ q, get, btn, msg }, d));
-    box.appendChild(el);
+    send.push({ it, text: v });
   });
+  const hasErr = job.items.some((it) => it.msg.className.includes("err"));
+  if (!send.length) {
+    if (!hasErr) {
+      job.msg.className = "msg err";
+      job.msg.textContent = job.items.every((it) => saved[it.q.id]) ? "Nothing changed." : job.items.length > 1 ? "Answer at least one question." : "Please write your question.";
+    }
+    return null;
+  }
+  return send;
 }
 
 function savedText(q) {
-  return q.type === "poll" ? "✓ Saved! You can change your vote until the poll closes."
-    : q.type === "ask" ? "✓ Question sent! The team will pick questions to ask live at the webinar."
+  return q.type === "poll" ? "✓ Vote saved! You can change it until the poll closes."
+    : q.type === "ask" ? "✓ Question sent! The team picks questions to ask live at the webinar."
     : "✓ Saved! You can edit it until the question closes.";
 }
 
-async function submitAnswer(p, d) {
-  const { q, get, btn, msg } = p, text = get();
-  msg.className = "msg";
-  if (q.type === "poll" && !text) { msg.className = "msg err"; msg.textContent = "Please pick an option."; return; }
-  if (q.type !== "poll" && text.length < minFor(q, d)) { msg.className = "msg err"; msg.textContent = `Please write at least ${minFor(q, d)} characters.`; return; }
-  if (!state.token) { state.pending = p; openSheet(); return; }   // first time on this device
-  btn.disabled = true; msg.textContent = "Saving…";
+/** Sends the answers one by one. The first one may carry the phone/email (first time on this device). */
+async function sendAll(send, ident) {
+  let registered = true;
+  for (const { it, text } of send) {
+    const body = { a: "answer", qid: it.q.id, text };
+    if (state.token) body.t = state.token; else Object.assign(body, ident);
+    const r = await post(body);
+    if (r.needLogin) { store.set("pp_t", ""); state.token = null; return { needLogin: true }; }
+    if (!r.ok) {
+      it.msg.className = "msg err"; it.msg.textContent = r.error || "Couldn't save. Try again.";
+      if (!state.token) throw new Error(r.error);   // first answer failed: stop and show it in the form
+      continue;
+    }
+    if (r.token && !state.token) { store.set("pp_t", r.token); state.token = r.token; }
+    saved[it.q.id] = text;
+    it.msg.className = "msg ok"; it.msg.textContent = savedText(it.q);
+    if (!r.registered) registered = false;
+  }
+  return { registered };
+}
+
+async function submitCard(job, d) {
+  const send = collect(job, d);
+  if (!send) return;
+  if (!state.token) { state.pending = { job, send }; openSheet(); return; }   // first time on this device
+  job.btn.disabled = true; job.msg.className = "msg"; job.msg.textContent = "Saving…";
   try {
-    const r = await post({ a: "answer", t: state.token, qid: q.id, text });
-    if (r.needLogin) { store.set("pp_t", ""); state.token = null; state.pending = p; openSheet(); return; }
-    if (!r.ok) throw new Error(r.error);
-    msg.className = "msg ok"; msg.textContent = savedText(q);
-    btn.textContent = "Update";
+    const r = await sendAll(send);
+    if (r.needLogin) { state.pending = { job, send }; openSheet(); return; }
+    job.msg.textContent = "";
+    if (job.items.every((it) => saved[it.q.id])) job.btn.textContent = "Update";
     if (!r.registered) $("regnudge").classList.remove("hidden");
     refresh();
-  } catch (e) { msg.className = "msg err"; msg.textContent = e.message || "Something went wrong. Try again."; }
-  finally { btn.disabled = false; }
+  } catch (e) { job.msg.className = "msg err"; job.msg.textContent = e.message || "Something went wrong. Try again."; }
+  finally { job.btn.disabled = false; }
+}
+
+/** Polls that closed: show the right answer (and whether you got it). */
+function renderClosedPolls(d) {
+  const box = $("results");
+  box.innerHTML = "";
+  (d.closedPolls || []).forEach((p) => {
+    const mine = d.myAnswers && d.myAnswers[p.id];
+    const el = document.createElement("div");
+    el.className = "result";
+    el.innerHTML = `<span class="tag">✅ Poll answer</span><p class="text"></p><p class="ans">Correct answer: <b></b></p><p class="you"></p>`;
+    el.querySelector(".text").textContent = p.text;
+    el.querySelector(".ans b").textContent = p.correct;
+    const you = el.querySelector(".you");
+    if (mine) {
+      const right = mine.toLowerCase() === p.correct.toLowerCase();
+      you.textContent = right ? `You answered ${mine}. Well done! 🎉 (+${d.points.pollCorrect} bonus points)` : `You answered ${mine}. Better luck next time! 💪`;
+      you.className = "you " + (right ? "right" : "wrong");
+    } else you.remove();
+    box.appendChild(el);
+  });
 }
 
 // ---------- "who are you" sheet ----------
@@ -124,7 +211,7 @@ function openSheet() {
   const f = $("idform");
   $("guest-fields").classList.add("hidden");
   $("sheet-msg").textContent = "";
-  $("sheet-go").textContent = "Submit my answer";
+  $("sheet-go").textContent = "Continue";
   $("sheet").classList.remove("hidden");
   f.phone.focus();
 }
@@ -136,29 +223,29 @@ $("idform").onsubmit = async (ev) => {
   ev.preventDefault();
   const f = ev.target, p = state.pending, go = $("sheet-go"), m = $("sheet-msg");
   const guest = !$("guest-fields").classList.contains("hidden");
-  const body = { a: "answer", qid: p.q.id, text: p.get(), phone: f.phone.value, email: f.email.value };
+  const ident = { phone: f.phone.value, email: f.email.value };
   if (guest) {
-    body.name = f.name.value.trim();
-    body.uni = f.uni.value === "__other" ? f.uniOther.value.trim() : f.uni.value;
-    if (!body.name || !body.uni) { m.className = "msg err"; m.textContent = "Please add your name and university."; return; }
+    ident.name = f.name.value.trim();
+    ident.uni = f.uni.value === "__other" ? f.uniOther.value.trim() : f.uni.value;
+    if (!ident.name || !ident.uni) { m.className = "msg err"; m.textContent = "Please add your name and university."; return; }
   }
   go.disabled = true; m.className = "msg"; m.textContent = "Checking…";
   try {
     // First check if this number is registered (only when not already in guest mode)
     if (!guest) {
-      const l = await post({ a: "login", phone: body.phone, email: body.email });
+      const l = await post({ a: "login", ...ident });
       if (!l.ok) throw new Error(l.error);
       if (!l.registered) {                       // not registered → ask name + university
         $("guest-fields").classList.remove("hidden");
-        m.textContent = ""; go.textContent = "Save my answer"; f.name.focus();
+        m.textContent = ""; go.textContent = "Save my answers"; f.name.focus();
         return;
       }
+      store.set("pp_t", l.token); state.token = l.token;   // registered: remembered on this device from now on
     }
-    const r = await post(body);
-    if (!r.ok) throw new Error(r.error);
-    store.set("pp_t", r.token); state.token = r.token;
+    const r = await sendAll(p.send, ident);
+    if (!state.token) throw new Error("Couldn't save. Please check your details.");
     $("sheet").classList.add("hidden");
-    p.msg.className = "msg ok"; p.msg.textContent = savedText(p.q); p.btn.textContent = "Update";
+    if (p.job.items.every((it) => saved[it.q.id])) p.job.btn.textContent = "Update";
     if (!r.registered) $("regnudge").classList.remove("hidden");
     refresh();
   } catch (e) { m.className = "msg err"; m.textContent = e.message || "Something went wrong. Try again."; }
@@ -232,18 +319,59 @@ $("copy-btn").onclick = async () => {
 };
 
 // ---------- start ----------
+// Speed: show what we had last time immediately, then update with fresh data.
+function showCached() {
+  try {
+    const c = JSON.parse(store.get("pp_cache") || "null");
+    if (!c || c.t !== (state.token || "") || Date.now() - c.at > 6 * 3600e3) return;
+    renderMe(c.d); renderBoard(c.d);
+  } catch {}
+}
+
 async function refresh(first) {
   try {
     const d = await getInit();
     if (!d.ok) throw new Error(d.error);
     state.data = d;
-    if (first) renderQuestions(d);
+    if (first) renderQuestions(d); else renderClosedPolls(d);
     renderMe(d); renderBoard(d);
+    store.set("pp_cache", JSON.stringify({ t: state.token || "", at: Date.now(), d: { ...d, questions: [], myAnswers: {} } }));
   } catch (e) {
     if (first) $("questions").innerHTML = `<div class="card mute small">Couldn't load right now. Please refresh the page.</div>`;
   }
 }
+showCached();
 refresh(true);
+
+// ---------- "The Series" carousel: auto-slides every 4 s, stops while someone touches it ----------
+(function carousel() {
+  const track = $("series"), dots = $("dots");
+  if (!track) return;
+  const cards = [...track.children];
+  const perView = () => (track.clientWidth >= 560 ? 2 : 1);
+  const pages = () => Math.max(1, cards.length - perView() + 1);
+  const current = () => Math.round(track.scrollLeft / (cards[0].offsetWidth + 12));
+  const go = (i) => track.scrollTo({ left: i * (cards[0].offsetWidth + 12), behavior: "smooth" });
+  function drawDots() {
+    dots.innerHTML = "";
+    for (let i = 0; i < pages(); i++) {
+      const b = document.createElement("button");
+      b.setAttribute("aria-label", `Webinar ${i + 1}`);
+      b.onclick = () => { go(i); pause(); };
+      dots.appendChild(b);
+    }
+    mark();
+  }
+  const mark = () => [...dots.children].forEach((b, i) => b.classList.toggle("on", i === Math.min(current(), pages() - 1)));
+  let timer = null, resume = null;
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const start = () => { if (!reduce && !timer) timer = setInterval(() => go((current() + 1) % pages()), 4000); };
+  const pause = () => { clearInterval(timer); timer = null; clearTimeout(resume); resume = setTimeout(start, 10000); };
+  track.addEventListener("scroll", () => requestAnimationFrame(mark), { passive: true });
+  ["pointerdown", "touchstart", "wheel", "focusin"].forEach((e) => track.addEventListener(e, pause, { passive: true }));
+  window.addEventListener("resize", drawDots);
+  drawDots(); start();
+})();
 // Opened through someone's invite link → tell the server (counted once per phone)
 if (state.ref) post({ a: "visit", ref: state.ref, t: state.token || "" }).catch(() => {});
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

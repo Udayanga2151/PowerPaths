@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <!-- HERO -->
@@ -36,6 +36,7 @@
     <section id="qsec">
       <h2 class="title">💡 Today's Questions</h2>
       <p class="mute small">Vote in the quick poll, share your opinion, and ask the resource person your own question. The best ideas and questions are picked for the live webinar.</p>
+      <div id="results"></div>
       <div id="questions"><div class="card skeleton">Loading…</div></div>
     </section>
 
@@ -71,7 +72,7 @@
     <section>
       <h2 class="title">⚡ The Series</h2>
       <p class="mute">Under the new Electricity Act, the CEB is being restructured into four separate entities. Each webinar takes one of them, with an industry expert explaining how it works and what it means for the next generation of engineers.</p>
-      <div class="webinars">
+      <div class="webinars" id="series" aria-roledescription="carousel" aria-label="The four webinars">
         <article class="w live"><div class="wtop"><span class="num">01</span><span class="date">Sun · 15 Nov</span></div>
           <span class="abbr">EGL</span><h3>Electricity Generation Lanka</h3>
           <p>How Sri Lanka produces its electricity: hydro, thermal and the fast-growing renewables, and the role of generation companies in the new structure.</p></article>
@@ -85,6 +86,7 @@
           <span class="abbr">NSO</span><h3>National System Operator</h3>
           <p>The control room of the nation: balancing supply and demand every second to keep the whole grid stable.</p></article>
       </div>
+      <div class="dots" id="dots" role="tablist" aria-label="Choose a webinar"></div>
       <a class="btn wide reg-link" target="_blank" rel="noopener">Register for the series</a>
     </section>
 
@@ -135,6 +137,6 @@
   </div>
 
   <script src="config.js?v=1"></script>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

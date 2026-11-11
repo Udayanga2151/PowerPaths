@@ -21,7 +21,9 @@ post0({ a: 'visit', ref: kasun.ref, v: 'device-nimali-1' });            // refre
 post0({ a: 'visit', ref: kasun.ref, v: 'device-kasun-01', t: kasun.token }); // Kasun opens own link: ignored
 post0({ a: 'visit', ref: 'zzzzzz', v: 'device-random-1' });             // unknown code: ignored
 
-const get = (t) => JSON.parse(g.doGet({ parameter: { a: 'init', t } }).body);
+// the team edits the Sheet directly in these tests → forget the 60-second cache first (in real life: shows within a minute)
+const getCached = (t) => JSON.parse(g.doGet({ parameter: { a: 'init', t } }).body);
+const get = (t) => { for (const k in env.cache) delete env.cache[k]; return getCached(t); };
 const post = (b) => JSON.parse(g.doPost({ postData: { contents: JSON.stringify(b) } }).body);
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
 
@@ -137,6 +139,24 @@ r = get('');
 ok(r.top.every(x => x.points > 10), 'leaderboard only shows people who did something');
 const rua = r.unis.find(u => u.uni === 'University Of Ruhuna');
 ok(rua.points >= 20 && rua.students === 2, 'university total includes register points of each student: ' + rua.points);
+
+// ---- speed cache ----
+get('');
+Qs.push([20, 1, 'Cached?', true, '', '', 'opinion']);
+ok(!getCached('').questions.find(q => q.id === '20'), 'cache: sheet edit not seen within the cache time');
+post({ a: 'answer', t: amal.token, qid: '1', text: 'A long enough opinion for the cache test.' });
+ok(getCached('').questions.find(q => q.id === '20'), 'cache: cleared after a new answer');
+ok(getCached(amal.token).me.points === 22, 'own points fresh right after answering: ' + getCached(amal.token).me.points);
+ok(!JSON.stringify(getCached('')).includes(amal.token), 'tokens never sent to other visitors');
+Qs.pop();
+
+// ---- correct poll answer shown after the poll closes ----
+Qs.push([21, 1, 'Closed poll', true, new Date(now - 5 * H), new Date(now - H), 'poll', 'A | B', 'B']);
+Qs.push([22, 1, 'Closed poll no answer', true, new Date(now - 5 * H), new Date(now - H), 'poll', 'A | B', '']);
+Qs.push([23, 1, 'Old closed poll', true, new Date(now - 10 * 24 * H), new Date(now - 9 * 24 * H), 'poll', 'A | B', 'A']);
+r = get('');
+ok(r.closedPolls.length === 1 && r.closedPolls[0].id === '21' && r.closedPolls[0].correct === 'B', 'closed poll with Correct shown (not open, not old, not without answer)');
+ok(!r.questions.find(q => q.id === '21'), 'closed poll no longer answerable');
 
 // registrants + emails
 const W = () => env.sheets['Registrants'].data;

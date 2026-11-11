@@ -66,8 +66,14 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .rules summary{cursor:pointer;color:var(--green2)}
 .rules ul{margin:8px 0 0 18px}
 /* webinars */
-.webinars{display:grid;grid-template-columns:1fr;gap:12px;margin:14px 0 4px}
-@media(min-width:620px){.webinars{grid-template-columns:1fr 1fr}}
+/* carousel: one card at a time on phones, two on wide screens; swipe or auto-slide */
+.webinars{display:flex;gap:12px;margin:14px 0 4px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.webinars::-webkit-scrollbar{display:none}
+.webinars .w{flex:0 0 100%;scroll-snap-align:start}
+@media(min-width:620px){.webinars .w{flex-basis:calc(50% - 6px)}}
+.dots{display:flex;justify-content:center;gap:8px;margin:10px 0 14px}
+.dots button{width:9px;height:9px;padding:0;border:0;border-radius:99px;background:rgba(230,240,235,.28);cursor:pointer;transition:width .25s,background .25s}
+.dots button.on{width:24px;background:var(--green2)}
 .w{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
 .w.live{border-color:rgba(57,181,74,.6)}
 .wtop{display:flex;justify-content:space-between;align-items:center}
@@ -102,3 +108,17 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .opt:has(input:checked){border-color:var(--green);background:rgba(57,181,74,.14)}
 .opt input:focus{outline:none}
 .qfoot .btn{white-space:nowrap}
+/* one card for poll + opinion */
+.q-main .qi+.qi{border-top:1px solid var(--line);margin-top:16px;padding-top:16px}
+.qi .count{display:block;margin-top:6px}
+.qi .msg{margin:6px 0 0}
+.qfoot .msg{margin:0;flex:1}
+/* poll answer after it closes */
+.result{background:rgba(57,181,74,.1);border:1px solid rgba(57,181,74,.45);border-radius:16px;padding:14px 16px;margin-top:12px}
+.result .tag{font-size:12px;font-weight:600;color:var(--green2)}
+.result .text{margin:4px 0;font-weight:600}
+.result .ans{margin:0}
+.result .ans b{color:var(--green2)}
+.result .you{margin:4px 0 0;font-size:14px}
+.result .you.right{color:var(--green2)}
+.result .you.wrong{color:var(--mute)}
