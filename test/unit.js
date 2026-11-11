@@ -55,7 +55,7 @@ ok(!r.ok, 'not-yet-open question rejected');
 r = post({ a: 'answer', t: kasun.token, qid: '1', text: 'Floating solar panels on reservoirs like Victoria.' });
 ok(r.ok && r.registered, 'registered answer saved');
 r = post({ a: 'answer', t: kasun.token, qid: '1', text: 'Floating solar on hydro reservoirs + battery storage.' });
-ok(r.ok && env.sheets['Answers'].data.length === 2, 'second submit updates same row');
+ok(!r.ok && r.locked && env.sheets['Answers'].data.length === 2 && String(env.sheets['Answers'].data[1][7]).startsWith('Floating solar panels'), 'quiz opinion locked after first submit (no change)');
 
 // guest who came through Kasun's link
 post({ a: 'visit', ref: kasun.ref, v: 'device-guest-01' });
@@ -116,25 +116,31 @@ ok(base === 10, 'registered, nothing done = 10: ' + base);
 r = post({ a: 'answer', t: amal.token, qid: '10', text: 'Wind' });
 ok(!r.ok, 'poll: answer not in options rejected');
 r = post({ a: 'answer', t: amal.token, qid: '10', text: 'hydro' });
-ok(r.ok && get(amal.token).me.points === 12, 'poll wrong answer = +2');
+ok(r.ok && r.correct === 'Coal' && get(amal.token).me.points === 12, 'poll wrong answer = +2, right answer sent back at once');
 r = post({ a: 'answer', t: amal.token, qid: '10', text: 'Coal' });
-ok(r.ok && get(amal.token).me.points === 15, 'poll changed to right answer = +2+3');
-ok(env.sheets['Answers'].data.filter(x => x[3] === amal.token && x[2] === 10 || x[3] === amal.token && x[2] === '10').length === 1, 'poll change updates same row');
+ok(!r.ok && r.locked && r.answer === 'Hydro' && get(amal.token).me.points === 12, 'quiz answer LOCKED: cannot change to the right one');
+ok(env.sheets['Answers'].data.filter(x => x[3] === amal.token && String(x[2]) === '10').length === 1, 'still one row');
+ok(get(amal.token).myResults['10'] === 'Coal' && get('').myResults && !Object.keys(get('').myResults).length, 'right answer only for people who answered');
+ok(!get(amal.token).myResults['11'], 'no right answer for unanswered poll');
 Qs[Qs.length - 4][8] = 3;   // team writes Correct as a number
 ok(get(amal.token).me.points === 12, 'Correct as number (3 = Solar) works');
 Qs[Qs.length - 4][8] = 'Coal';
 post({ a: 'answer', t: amal.token, qid: '11', text: 'Yes' });
-ok(get(amal.token).me.points === 17, 'poll with no right answer = +2 only');
+ok(get(amal.token).me.points === 14, 'poll with no right answer = +2 only');
+r = post({ a: 'answer', t: amal.token, qid: '11', text: 'No' });
+ok(r.locked && r.correct === '', 'no-answer poll also locked, no correct sent');
 r = post({ a: 'answer', t: amal.token, qid: '12', text: 'short' });
 ok(!r.ok, 'ask: too short rejected');
 r = post({ a: 'answer', t: amal.token, qid: '12', text: 'How will EGL buy solar power?' });
-ok(r.ok && get(amal.token).me.points === 20, 'ask = +3');
+ok(r.ok && get(amal.token).me.points === 17, 'ask = +3');
+r = post({ a: 'answer', t: amal.token, qid: '12', text: 'How will EGL buy rooftop solar power?' });
+ok(r.ok && !('correct' in r), 'ask can still be edited');
 const ai = env.sheets['Answers'].data.findIndex(x => x[3] === amal.token && String(x[2]) === '12');
 ok(env.sheets['Answers'].data[ai][10] === 'ask', 'Answers row has Type = ask');
 env.sheets['Answers'].data[ai][9] = true;
-ok(get(amal.token).me.points === 40, 'ask picked for webinar = +20');
+ok(get(amal.token).me.points === 37, 'ask picked for webinar = +20');
 env.sheets['Answers'].data[ai][8] = 0;
-ok(get(amal.token).me.points === 17, 'ask marked spam (0 stars) = 0');
+ok(get(amal.token).me.points === 14, 'ask marked spam (0 stars) = 0');
 r = get('');
 ok(r.top.every(x => x.points > 10), 'leaderboard only shows people who did something');
 const rua = r.unis.find(u => u.uni === 'University Of Ruhuna');
@@ -146,11 +152,12 @@ Qs.push([20, 1, 'Cached?', true, '', '', 'opinion']);
 ok(!getCached('').questions.find(q => q.id === '20'), 'cache: sheet edit not seen within the cache time');
 post({ a: 'answer', t: amal.token, qid: '1', text: 'A long enough opinion for the cache test.' });
 ok(getCached('').questions.find(q => q.id === '20'), 'cache: cleared after a new answer');
-ok(getCached(amal.token).me.points === 22, 'own points fresh right after answering: ' + getCached(amal.token).me.points);
+ok(getCached(amal.token).me.points === 19, 'own points fresh right after answering: ' + getCached(amal.token).me.points);
 ok(!JSON.stringify(getCached('')).includes(amal.token), 'tokens never sent to other visitors');
 Qs.pop();
 
-// ---- correct poll answer shown after the poll closes ----
+// ---- correct poll answer shown after the poll closes (only if SHOW_POLL_ANSWER_DAYS > 0) ----
+require('vm').runInContext('CONFIG.SHOW_POLL_ANSWER_DAYS = 3', g);
 Qs.push([21, 1, 'Closed poll', true, new Date(now - 5 * H), new Date(now - H), 'poll', 'A | B', 'B']);
 Qs.push([22, 1, 'Closed poll no answer', true, new Date(now - 5 * H), new Date(now - H), 'poll', 'A | B', '']);
 Qs.push([23, 1, 'Old closed poll', true, new Date(now - 10 * 24 * H), new Date(now - 9 * 24 * H), 'poll', 'A | B', 'A']);

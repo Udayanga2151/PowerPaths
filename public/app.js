@@ -35,17 +35,19 @@ async function post(body) {
 }
 
 // ---------- questions ----------
-// Poll + opinion questions share ONE "Submit my answers" button. "Ask the expert" questions have their own button.
+// QUIZ card: polls (+ opinions) share ONE "Submit my answers" button. Answered once, then locked, and polls show ✓ / ✗ right away.
+// ASK card: "Ask the expert" questions have their own button and can be edited.
 const KIND = {
-  poll: { tag: "📊 Quick poll" },
+  poll: { tag: "📊 Quick quiz" },
   opinion: { tag: "💡 Your opinion", ph: "Your idea…" },
   ask: { tag: "🎤 Ask the expert", ph: "Your question for the resource person…" },
 };
 const minFor = (q, d) => (q.type === "ask" ? d.minLenAsk || 10 : d.minLen);
-const saved = {};   // what is already saved for each question (so unchanged answers are not sent again)
+const saved = {};   // what is already saved for each question
 const fmtClose = (iso) => new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Colombo" });
+const isQuiz = (q) => q.type !== "ask";
 
-/** One question block (tag, text, input). Returns {q, get, msg, el}. */
+/** One question block (tag, text, input). Returns {q, get, msg, el, lock}. */
 function questionBlock(q, d) {
   const type = KIND[q.type] ? q.type : "opinion", K = KIND[type];
   const el = document.createElement("div");
@@ -58,19 +60,20 @@ function questionBlock(q, d) {
   const field = el.querySelector(".field"), msg = el.querySelector(".msg");
   const mine = d.myAnswers && d.myAnswers[q.id];
   if (mine) saved[q.id] = mine;
-  let get;
+  const it = { q, msg, el };
   if (type === "poll") {
     q.options.forEach((o) => {
       const lab = document.createElement("label");
       lab.className = "opt";
-      lab.innerHTML = `<input type="radio"><span></span>`;
+      lab.innerHTML = `<input type="radio"><span class="otext"></span><span class="mark" aria-hidden="true"></span>`;
       const r = lab.querySelector("input");
       r.name = "poll-" + q.id; r.value = o;
       if (mine && mine.toLowerCase() === o.toLowerCase()) r.checked = true;
-      lab.querySelector("span").textContent = o;
+      lab.querySelector(".otext").textContent = o;
       field.appendChild(lab);
     });
-    get = () => { const c = field.querySelector("input:checked"); return c ? c.value : ""; };
+    it.get = () => { const c = field.querySelector("input:checked"); return c ? c.value : ""; };
+    it.lock = (answer, correct, animate) => showResult(it, answer, correct, animate);
   } else {
     const ta = document.createElement("textarea");
     ta.placeholder = K.ph; ta.maxLength = d.maxLen;
@@ -81,10 +84,34 @@ function questionBlock(q, d) {
     const min = minFor(q, d);
     const upd = () => (cnt.textContent = `${ta.value.trim().length} / ${d.maxLen}` + (ta.value.trim().length < min ? ` (min ${min})` : "") + (type === "ask" ? " · 🔒 only the team sees it" : ""));
     ta.addEventListener("input", upd); upd();
-    get = () => ta.value.trim();
+    it.get = () => ta.value.trim();
+    it.lock = () => { it.locked = true; ta.readOnly = true; cnt.remove(); el.classList.add("locked"); msg.className = "msg ok"; msg.textContent = "✓ Submitted"; };
+    if (type === "ask" && mine) { msg.className = "msg ok"; msg.textContent = "✓ Sent. You can still edit it."; }
   }
-  if (mine) { msg.className = "msg ok"; msg.textContent = "✓ Saved"; }
-  return { q, get, msg, el };
+  if (mine && isQuiz(q)) { it.locked = true; it.lock(mine, (d.myResults || {})[q.id] || "", false); }
+  return it;
+}
+
+/** Poll result: lock the options, colour the right one green and a wrong pick red. */
+function showResult(it, answer, correct, animate) {
+  it.locked = true;
+  const opts = [...it.el.querySelectorAll(".opt")];
+  it.el.classList.add("locked");
+  opts.forEach((lab, i) => {
+    const inp = lab.querySelector("input"), v = inp.value;
+    inp.disabled = true;
+    inp.checked = v.toLowerCase() === String(answer).toLowerCase();
+    lab.classList.remove("right", "wrong", "answer");
+    if (correct && v.toLowerCase() === correct.toLowerCase()) lab.classList.add(inp.checked ? "right" : "answer");
+    else if (correct && inp.checked) lab.classList.add("wrong");
+    else if (!correct && inp.checked) lab.classList.add("picked");
+    if (animate) lab.style.animationDelay = i * 60 + "ms";
+  });
+  it.el.classList.toggle("animate", !!animate);
+  const ok = correct && String(answer).toLowerCase() === correct.toLowerCase();
+  it.msg.className = "msg " + (correct ? (ok ? "ok" : "bad") : "ok");
+  it.msg.textContent = !correct ? "✓ Vote saved" : ok ? "✅ Correct! Well done" : `❌ Not quite. The right answer is ${correct}`;
+  return ok;
 }
 
 function renderQuestions(d) {
@@ -95,26 +122,63 @@ function renderQuestions(d) {
     box.innerHTML = `<div class="card mute small">No open question right now. A new one is coming soon, so watch the WhatsApp community! 👀</div>`;
     return;
   }
-  const main = d.questions.filter((q) => q.type !== "ask").sort((a, b) => (a.type === "poll" ? 0 : 1) - (b.type === "poll" ? 0 : 1));
-  const asks = d.questions.filter((q) => q.type === "ask");
-  if (main.length) box.appendChild(questionCard(main, d, "Submit my answers"));
-  asks.forEach((q) => box.appendChild(questionCard([q], d, "Send question")));
+  const quiz = d.questions.filter(isQuiz).sort((a, b) => (a.type === "poll" ? 0 : 1) - (b.type === "poll" ? 0 : 1));
+  const asks = d.questions.filter((q) => !isQuiz(q));
+  if (quiz.length) box.appendChild(questionCard(quiz, d, "Submit my answers", "q-main"));
+  asks.forEach((q) => box.appendChild(questionCard([q], d, "Send question", "q-ask-card")));
 }
 
 /** A card with one or more questions and ONE button. */
-function questionCard(list, d, label) {
+function questionCard(list, d, label, cls) {
   const card = document.createElement("div");
-  card.className = "q" + (list.length === 1 && list[0].type === "ask" ? " q-ask-card" : " q-main");
+  card.className = "q " + cls;
   const items = list.map((q) => questionBlock(q, d));
   items.forEach((it) => card.appendChild(it.el));
   const foot = document.createElement("div");
   foot.className = "qfoot";
   foot.innerHTML = `<p class="msg"></p><button class="btn"></button>`;
   const btn = foot.querySelector("button"), msg = foot.querySelector(".msg");
-  btn.textContent = items.every((it) => saved[it.q.id]) ? "Update" : label;
   card.appendChild(foot);
-  btn.addEventListener("click", () => submitCard({ items, btn, msg }, d));
+  const job = { items, btn, msg, label, card, quiz: cls === "q-main" };
+  setButton(job, d);
+  if (job.quiz && items.every((it) => it.locked)) summary(job, d, false);
+  btn.addEventListener("click", () => submitCard(job, d));
   return card;
+}
+
+function setButton(job) {
+  if (job.quiz && job.items.every((it) => it.locked)) {
+    job.btn.textContent = "✓ You have submitted"; job.btn.disabled = true; job.btn.classList.add("done");
+  } else {
+    job.btn.disabled = false; job.btn.classList.remove("done");
+    job.btn.textContent = !job.quiz && job.items.every((it) => saved[it.q.id]) ? "Update" : job.label;
+  }
+}
+
+/** Score line under the quiz, e.g. "You got 2 of 3 right" (+ a little celebration when all are right). */
+function summary(job, d, animate) {
+  const polls = job.items.filter((it) => it.q.type === "poll" && it.el.querySelector(".opt.right, .opt.wrong"));
+  if (!polls.length) return;
+  const right = polls.filter((it) => it.el.querySelector(".opt.right")).length;
+  job.msg.className = "msg score";
+  const bonus = right * (d.points.pollCorrect || 0);
+  job.msg.textContent = right === polls.length ? `🏆 ${right} / ${polls.length} correct! +${bonus} bonus points` : right ? `You got ${right} / ${polls.length} right · +${bonus} bonus points` : `0 / ${polls.length} this time. Come back tomorrow for new questions! 💪`;
+  if (animate && right === polls.length) celebrate(job.card);
+}
+
+function celebrate(card) {
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const burst = document.createElement("div");
+  burst.className = "burst";
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement("i");
+    s.textContent = i % 3 ? "✦" : "⚡";
+    s.style.setProperty("--a", (i * 20) + "deg");
+    s.style.setProperty("--d", 60 + (i % 4) * 22 + "px");
+    burst.appendChild(s);
+  }
+  card.appendChild(burst);
+  setTimeout(() => burst.remove(), 1400);
 }
 
 /** Check what is filled in. Returns the answers to send, or null if nothing can be sent. */
@@ -122,6 +186,7 @@ function collect(job, d) {
   const send = [];
   job.msg.className = "msg"; job.msg.textContent = "";
   job.items.forEach((it) => {
+    if (it.locked) return;
     const v = it.get();
     if (!(it.msg.className.includes("ok") && saved[it.q.id] === v)) { it.msg.className = "msg"; it.msg.textContent = ""; }
     if (!v || saved[it.q.id] === v) return;                       // empty or unchanged: skip
@@ -135,17 +200,17 @@ function collect(job, d) {
   if (!send.length) {
     if (!hasErr) {
       job.msg.className = "msg err";
-      job.msg.textContent = job.items.every((it) => saved[it.q.id]) ? "Nothing changed." : job.items.length > 1 ? "Answer at least one question." : "Please write your question.";
+      job.msg.textContent = !job.quiz && job.items.every((it) => saved[it.q.id]) ? "Nothing changed." : job.items.length > 1 ? "Answer at least one question." : job.quiz ? "Please pick an answer." : "Please write your question.";
     }
     return null;
   }
+  // quiz: answers are final, so check before sending
+  if (job.quiz) {
+    const open = job.items.filter((it) => !it.locked).length;
+    const warn = send.length < open ? `You answered ${send.length} of ${open}. ` : "";
+    if (!confirm(`${warn}Submit now? Quiz answers can't be changed after you submit.`)) return null;
+  }
   return send;
-}
-
-function savedText(q) {
-  return q.type === "poll" ? "✓ Vote saved! You can change it until the poll closes."
-    : q.type === "ask" ? "✓ Question sent! The team picks questions to ask live at the webinar."
-    : "✓ Saved! You can edit it until the question closes.";
 }
 
 /** Sends the answers one by one. The first one may carry the phone/email (first time on this device). */
@@ -156,6 +221,7 @@ async function sendAll(send, ident) {
     if (state.token) body.t = state.token; else Object.assign(body, ident);
     const r = await post(body);
     if (r.needLogin) { store.set("pp_t", ""); state.token = null; return { needLogin: true }; }
+    if (!r.ok && r.locked) { saved[it.q.id] = r.answer; it.lock(r.answer, r.correct || "", true); continue; }   // answered before (other device)
     if (!r.ok) {
       it.msg.className = "msg err"; it.msg.textContent = r.error || "Couldn't save. Try again.";
       if (!state.token) throw new Error(r.error);   // first answer failed: stop and show it in the form
@@ -163,26 +229,31 @@ async function sendAll(send, ident) {
     }
     if (r.token && !state.token) { store.set("pp_t", r.token); state.token = r.token; }
     saved[it.q.id] = text;
-    it.msg.className = "msg ok"; it.msg.textContent = savedText(it.q);
+    if (isQuiz(it.q)) it.lock(text, r.correct || "", true);
+    else { it.msg.className = "msg ok"; it.msg.textContent = "✓ Question sent! The team picks questions to ask live at the webinar."; }
     if (!r.registered) registered = false;
   }
   return { registered };
+}
+
+function afterSend(job, r) {
+  job.msg.className = "msg"; job.msg.textContent = "";
+  setButton(job);
+  if (job.quiz) summary(job, state.data || { points: {} }, true);
+  if (!r.registered) setTimeout(() => $("regnudge").classList.remove("hidden"), job.quiz ? 1600 : 0);
+  refresh();
 }
 
 async function submitCard(job, d) {
   const send = collect(job, d);
   if (!send) return;
   if (!state.token) { state.pending = { job, send }; openSheet(); return; }   // first time on this device
-  job.btn.disabled = true; job.msg.className = "msg"; job.msg.textContent = "Saving…";
+  job.btn.disabled = true; job.msg.className = "msg"; job.msg.textContent = "Checking your answers…";
   try {
     const r = await sendAll(send);
     if (r.needLogin) { state.pending = { job, send }; openSheet(); return; }
-    job.msg.textContent = "";
-    if (job.items.every((it) => saved[it.q.id])) job.btn.textContent = "Update";
-    if (!r.registered) $("regnudge").classList.remove("hidden");
-    refresh();
-  } catch (e) { job.msg.className = "msg err"; job.msg.textContent = e.message || "Something went wrong. Try again."; }
-  finally { job.btn.disabled = false; }
+    afterSend(job, r);
+  } catch (e) { job.msg.className = "msg err"; job.msg.textContent = e.message || "Something went wrong. Try again."; setButton(job); }
 }
 
 /** Polls that closed: show the right answer (and whether you got it). */
@@ -193,13 +264,13 @@ function renderClosedPolls(d) {
     const mine = d.myAnswers && d.myAnswers[p.id];
     const el = document.createElement("div");
     el.className = "result";
-    el.innerHTML = `<span class="tag">✅ Poll answer</span><p class="text"></p><p class="ans">Correct answer: <b></b></p><p class="you"></p>`;
+    el.innerHTML = `<span class="tag">✅ Yesterday's quiz</span><p class="text"></p><p class="ans">Correct answer: <b></b></p><p class="you"></p>`;
     el.querySelector(".text").textContent = p.text;
     el.querySelector(".ans b").textContent = p.correct;
     const you = el.querySelector(".you");
     if (mine) {
       const right = mine.toLowerCase() === p.correct.toLowerCase();
-      you.textContent = right ? `You answered ${mine}. Well done! 🎉 (+${d.points.pollCorrect} bonus points)` : `You answered ${mine}. Better luck next time! 💪`;
+      you.textContent = right ? `You answered ${mine}. Well done! 🎉` : `You answered ${mine}.`;
       you.className = "you " + (right ? "right" : "wrong");
     } else you.remove();
     box.appendChild(el);
@@ -245,9 +316,7 @@ $("idform").onsubmit = async (ev) => {
     const r = await sendAll(p.send, ident);
     if (!state.token) throw new Error("Couldn't save. Please check your details.");
     $("sheet").classList.add("hidden");
-    if (p.job.items.every((it) => saved[it.q.id])) p.job.btn.textContent = "Update";
-    if (!r.registered) $("regnudge").classList.remove("hidden");
-    refresh();
+    afterSend(p.job, r);
   } catch (e) { m.className = "msg err"; m.textContent = e.message || "Something went wrong. Try again."; }
   finally { go.disabled = false; }
 };
@@ -293,7 +362,7 @@ function renderBoard(d) {
   d.unis.forEach((u) => un.appendChild(li(u.rank, u.uni, `${u.students} registered`, u.points)));
   const P = d.points;
   $("rules").innerHTML = `<li>Register for PowerPaths: <b>${P.register}</b></li>
-    <li>Answer a quick poll: <b>${P.poll}</b> (+${P.pollCorrect} if you're right)</li>
+    <li>Answer a quiz question: <b>${P.poll}</b> (+${P.pollCorrect} more if you're right)</li>
     <li>Share your opinion: <b>${P.opinion}</b>, plus <b>${P.star}</b> for each ⭐ the team gives it (up to 5 ⭐)</li>
     <li>Your opinion picked as a best idea: <b>+${P.best}</b></li>
     <li>Ask the resource person a question: <b>${P.ask}</b> (+${P.askPicked} if it's picked for the webinar)</li>

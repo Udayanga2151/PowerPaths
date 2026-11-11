@@ -3,6 +3,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 const { load } = require('./mock-gas');
 const env = load(require('./seed')());
 env.ctx.setup();
+require('vm').runInContext('CONFIG.SHOW_POLL_ANSWER_DAYS = 3', env.ctx);
 env.sheets['Questions'].data.push([1, 1, 'Sri Lanka wants 70% renewable electricity. What creative idea would help us get there faster?', true, '', '', 'opinion']);
 env.sheets['Questions'].data.push([2, 1, 'Which source generated the most electricity in Sri Lanka in 2025?', true, '', '', 'poll', 'Hydro | Coal | Solar | Wind', 'Coal']);
 env.sheets['Questions'].data.push([3, 1, 'What would you like to ask the resource person about Electricity Generation Lanka?', true, '', '', 'ask']);

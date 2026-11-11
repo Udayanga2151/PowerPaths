@@ -122,3 +122,37 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .result .you{margin:4px 0 0;font-size:14px}
 .result .you.right{color:var(--green2)}
 .result .you.wrong{color:var(--mute)}
+/* ---------- quiz results ---------- */
+.opt .otext{flex:1}
+.opt .mark{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:700;flex:none;transform:scale(0)}
+.qi.locked .opt{cursor:default}
+.qi.locked .opt:not(.right):not(.wrong):not(.answer):not(.picked){opacity:.45}
+.opt.right,.opt.right:has(input:checked){border-color:var(--green2);background:rgba(57,181,74,.22)}
+.opt.right .mark{background:var(--green2);color:#03140a;transform:scale(1)}
+.opt.right .mark::before{content:"✓"}
+.opt.wrong,.opt.wrong:has(input:checked){border-color:var(--red);background:rgba(255,107,91,.14)}
+.opt.wrong .mark{background:var(--red);color:#fff;transform:scale(1)}
+.opt.wrong .mark::before{content:"✕"}
+.opt.answer{border:1px dashed var(--green2)}
+.opt.answer .mark{border:2px solid var(--green2);color:var(--green2);transform:scale(1)}
+.opt.answer .mark::before{content:"✓"}
+.opt.picked{border-color:var(--green)}
+.animate .opt.right,.animate .opt.wrong,.animate .opt.answer{animation:optIn .35s ease both}
+.animate .opt.right .mark,.animate .opt.answer .mark{animation:pop .45s cubic-bezier(.2,1.6,.4,1) both;animation-delay:inherit}
+.animate .opt.wrong{animation:shake .45s ease both}
+.animate .opt.wrong .mark{animation:pop .45s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes pop{0%{transform:scale(0)}100%{transform:scale(1)}}
+@keyframes optIn{0%{transform:scale(.97)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.msg.bad{color:var(--red)}
+.msg.score{color:var(--green2);font-weight:700}
+.btn.done{background:transparent;color:var(--green2);border:1px solid rgba(91,224,116,.5);cursor:default;opacity:1}
+.q{position:relative;overflow:hidden}
+.burst{position:absolute;left:50%;bottom:70px;width:0;height:0;pointer-events:none}
+.burst i{position:absolute;font-style:normal;color:var(--green2);font-size:16px;animation:fly 1.2s ease-out forwards;transform:rotate(var(--a)) translateY(0);opacity:1}
+.burst i:nth-child(3n){color:var(--gold)}
+@keyframes fly{to{transform:rotate(var(--a)) translateY(calc(var(--d) * -1.6));opacity:0}}
+@media (prefers-reduced-motion:reduce){.animate .opt,.animate .opt .mark{animation:none!important}}
+.q-main .qfoot{flex-wrap:wrap}
+.q-main .qfoot .msg.score{flex-basis:100%;order:-1;text-align:center;font-size:15px}
+.q-main .qfoot .btn.done{margin-left:auto}
