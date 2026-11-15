@@ -358,7 +358,7 @@ function renderBoard(d) {
   const st = $("students"), un = $("unis");
   st.innerHTML = ""; un.innerHTML = "";
   if (!d.top.length) st.innerHTML = `<li class="mute small">No points yet. Answer today's question and be the first! 🚀</li>`;
-  d.top.forEach((r) => st.appendChild(li(r.rank, r.name, `${r.uni} · ${r.answers} answers · ${r.visits} invites`, r.points)));
+  d.top.forEach((r) => st.appendChild(li(r.rank, r.name, `${r.uni} · ${r.answers} answers · ${r.visits} invites · ${r.joins} joined`, r.points)));
   d.unis.forEach((u) => un.appendChild(li(u.rank, u.uni, `${u.students} registered`, u.points)));
   const P = d.points;
   $("rules").innerHTML = `<li>Register for PowerPaths: <b>${P.register}</b></li>
