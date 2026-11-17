@@ -333,18 +333,33 @@ function li(rank, title, sub, pts) {
   return el;
 }
 
-// numbers run up from what was shown before to the new value
-function countUp(el, to) {
-  const from = parseInt(el.textContent, 10) || 0;
-  to = Number(to) || 0;
-  if (from === to || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) { el.textContent = to; return; }
-  const t0 = performance.now(), dur = 900;
+// numbers run up when they scroll into view (the first time), and from the old value on later updates.
+// opts.from: start value for the first run (default 0), opts.prefix: e.g. "#" for the rank
+const reduceMotion = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+const seenIO = "IntersectionObserver" in window ? new IntersectionObserver((list) => list.forEach((e) => {
+  if (!e.isIntersecting) return;
+  seenIO.unobserve(e.target); e.target.dataset.seen = "1"; runCount(e.target);
+}), { threshold: 0.6 }) : null;
+function runCount(el) {
+  const pre = el.dataset.pre || "", to = Number(el.dataset.to) || 0;
+  const from = parseInt(String(el.textContent).replace(/[^\d-]/g, ""), 10) || 0;
+  if (from === to || reduceMotion) { el.textContent = pre + to; return; }
+  const t0 = performance.now(), dur = 1100;
   const step = (t) => {
     const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-    el.textContent = Math.round(from + (to - from) * e);
+    el.textContent = pre + Math.round(from + (to - from) * e);
     if (k < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
+}
+function countUp(el, to, opts = {}) {
+  el.dataset.to = Number(to) || 0; el.dataset.pre = opts.prefix || "";
+  if (seenIO && !reduceMotion && !el.dataset.seen) {        // not looked at yet: wait until it scrolls into view
+    el.textContent = el.dataset.pre + (opts.from || 0);
+    seenIO.observe(el);
+    return;
+  }
+  runCount(el);
 }
 
 // is this leaderboard row the person looking at the site?
@@ -376,7 +391,7 @@ function renderMe(d) {
   if (me && me.registered) {
     $("hello").textContent = `👋 Hi ${me.name} · #${me.rank} of ${me.of}`;
     $("hello").classList.remove("hidden");
-    $("me-rank").textContent = "#" + me.rank; $("me-of").textContent = ` of ${me.of}`;
+    countUp($("me-rank"), me.rank, { from: me.of, prefix: "#" }); $("me-of").textContent = ` of ${me.of}`;
     countUp($("me-points"), me.points); countUp($("me-refs"), me.visits); countUp($("me-ans"), me.answers); countUp($("me-joins"), me.joins || 0);
     $("me-card").classList.remove("hidden");
     const link = `${location.origin}${location.pathname}?ref=${me.ref}`;
