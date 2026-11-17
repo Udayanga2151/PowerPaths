@@ -333,13 +333,51 @@ function li(rank, title, sub, pts) {
   return el;
 }
 
+// numbers run up from what was shown before to the new value
+function countUp(el, to) {
+  const from = parseInt(el.textContent, 10) || 0;
+  to = Number(to) || 0;
+  if (from === to || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) { el.textContent = to; return; }
+  const t0 = performance.now(), dur = 900;
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(from + (to - from) * e);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+// is this leaderboard row the person looking at the site?
+const isMe = (r, me) => !!(me && me.registered && r.rank === me.rank && r.points === me.points && r.uni === me.uni &&
+  String(r.name).split(" ")[0].toLowerCase() === String(me.name).split(/\s+/)[0].toLowerCase());
+
+// top 3 as a podium: 2nd | 1st | 3rd
+function podium(rows, me) {
+  const el = document.createElement("li");
+  el.className = "podium";
+  [1, 0, 2].forEach((i) => {
+    const r = rows[i];
+    if (!r) return;
+    const p = document.createElement("div");
+    p.className = "pod r" + r.rank + (i === 0 ? " mid" : "") + (isMe(r, me) ? " me-row" : "");  // colour by rank (ties share it), centre one is taller
+    p.innerHTML = `<span class="medal"></span><b class="nm"></b><span class="un"></span><strong class="pp"><span>0</span> pts</strong><small></small><em class="you">You</em>`;
+    p.querySelector(".medal").textContent = ["🥇", "🥈", "🥉"][r.rank - 1] || "#" + r.rank;
+    p.querySelector(".nm").textContent = r.name;
+    p.querySelector(".un").textContent = r.uni;
+    p.querySelector("small").textContent = `${r.answers} answers · ${r.visits} invites · ${r.joins} joined`;
+    countUp(p.querySelector(".pp span"), r.points);
+    el.appendChild(p);
+  });
+  return el;
+}
+
 function renderMe(d) {
   const me = d.me;
   if (me && me.registered) {
     $("hello").textContent = `👋 Hi ${me.name} · #${me.rank} of ${me.of}`;
     $("hello").classList.remove("hidden");
     $("me-rank").textContent = "#" + me.rank; $("me-of").textContent = ` of ${me.of}`;
-    $("me-points").textContent = me.points; $("me-refs").textContent = me.visits; $("me-ans").textContent = me.answers; $("me-joins").textContent = me.joins || 0;
+    countUp($("me-points"), me.points); countUp($("me-refs"), me.visits); countUp($("me-ans"), me.answers); countUp($("me-joins"), me.joins || 0);
     $("me-card").classList.remove("hidden");
     const link = `${location.origin}${location.pathname}?ref=${me.ref}`;
     $("ref-link").value = link;
@@ -358,7 +396,12 @@ function renderBoard(d) {
   const st = $("students"), un = $("unis");
   st.innerHTML = ""; un.innerHTML = "";
   if (!d.top.length) st.innerHTML = `<li class="mute small">No points yet. Answer today's question and be the first! 🚀</li>`;
-  d.top.forEach((r) => st.appendChild(li(r.rank, r.name, `${r.uni} · ${r.answers} answers · ${r.visits} invites · ${r.joins} joined`, r.points)));
+  if (d.top.length >= 3) st.appendChild(podium(d.top, d.me));
+  d.top.slice(d.top.length >= 3 ? 3 : 0).forEach((r) => {
+    const row = li(r.rank, r.name, `${r.uni} · ${r.answers} answers · ${r.visits} invites · ${r.joins} joined`, r.points);
+    if (isMe(r, d.me)) { row.classList.add("me-row"); row.querySelector(".who b").insertAdjacentHTML("beforeend", ' <em class="you">You</em>'); }
+    st.appendChild(row);
+  });
   d.unis.forEach((u) => un.appendChild(li(u.rank, u.uni, `${u.students} registered · ${u.answers || 0} answers · ${u.visits || 0} invites · ${u.joins || 0} joined`, u.points)));
   const P = d.points;
   // keep the points cards in step with the server's numbers (the HTML already has the defaults, so they show at once)

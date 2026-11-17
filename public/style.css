@@ -40,7 +40,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .count{font-size:12px;color:var(--mute)}
 .msg{font-size:13px;margin-top:8px;min-height:1px}
 .msg.ok{color:var(--green2)}.msg.err{color:var(--red)}
-.skeleton{color:var(--mute);margin-top:12px}
+.skeleton{color:var(--mute);margin-top:12px;padding-top:6px}
 /* invite */
 .row{display:flex;gap:8px;margin:12px 0 0}
 .row input{flex:1;min-width:0;font-size:14px}
@@ -188,3 +188,32 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
   animation:beam 2.4s linear infinite}
 @keyframes beam{to{--ang:360deg}}
 @media (prefers-reduced-motion:reduce){.beam.on::before{animation:none}.beam,.beam.on{transform:none;transition:none}}
+
+/* podium: 2nd | 1st | 3rd */
+.ranks .podium{display:grid;grid-template-columns:1fr 1.12fr 1fr;align-items:end;gap:8px;background:none;border:0;padding:6px 0 4px}
+.pod{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 8px 12px}
+.pod.mid{padding-top:22px;padding-bottom:20px}
+.pod.r1{border-color:var(--gold);background:linear-gradient(180deg,rgba(227,195,77,.16),var(--panel) 60%);box-shadow:0 0 26px rgba(227,195,77,.14)}
+.pod.r2{border-color:#c9d1d6;background:linear-gradient(180deg,rgba(201,209,214,.12),var(--panel) 60%)}
+.pod.r3{border-color:#c98a4d;background:linear-gradient(180deg,rgba(201,138,77,.14),var(--panel) 60%)}
+.pod .medal{font-size:28px;line-height:1}
+.pod.mid .medal{font-size:36px}
+.pod .nm{margin-top:6px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod .un{font-size:11.5px;color:var(--mute);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.pod .pp{margin-top:6px;font-size:18px;color:var(--green2)}
+.pod.mid .pp{font-size:22px}
+.pod small{margin-top:4px;font-size:10.5px;color:var(--mute);line-height:1.35}
+.pod .you{display:none}
+.you{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#03140a;background:var(--green2);border-radius:999px;padding:2px 8px;vertical-align:middle}
+.pod.me-row .you{display:inline-block;position:absolute;top:-9px;left:50%;transform:translateX(-50%)}
+.ranks li.me-row,.pod.me-row{border-color:var(--green2);box-shadow:0 0 0 1px var(--green2),0 0 22px rgba(91,224,116,.25)}
+.ranks li.me-row{background:linear-gradient(90deg,rgba(91,224,116,.12),var(--panel) 70%)}
+@media(max-width:420px){.ranks .podium{gap:6px}.pod{padding:12px 5px 10px}.pod.mid{padding-top:18px}.pod .nm{font-size:13.5px}.pod .pp{font-size:16px}.pod.mid .pp{font-size:19px}.pod small{font-size:9.5px}}
+
+/* loading shimmer */
+.sh{display:block;height:12px;border-radius:8px;margin:10px 0;background:linear-gradient(90deg,rgba(255,255,255,.05) 25%,rgba(91,224,116,.13) 50%,rgba(255,255,255,.05) 75%);background-size:200% 100%;animation:shim 1.3s linear infinite}
+.sh.tall{height:20px}.sh.box{height:46px;border-radius:12px}
+.w40{width:40%}.w50{width:50%}.w60{width:60%}.w70{width:70%}.w90{width:90%}.w100{width:100%}
+.ranks li.sk-row{height:62px}.sk-row .sh{flex:1;max-width:70%}
+@keyframes shim{from{background-position:200% 0}to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.sh{animation:none}}
