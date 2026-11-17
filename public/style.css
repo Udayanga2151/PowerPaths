@@ -217,3 +217,15 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .ranks li.sk-row{height:62px}.sk-row .sh{flex:1;max-width:70%}
 @keyframes shim{from{background-position:200% 0}to{background-position:-200% 0}}
 @media (prefers-reduced-motion:reduce){.sh{animation:none}}
+
+/* share my rank / university */
+.share-row{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.sbtn{display:flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:600;font-size:14px;padding:11px 10px;border-radius:999px;cursor:pointer;border:1px solid var(--green2);color:#03140a;background:var(--green2);box-shadow:0 6px 18px rgba(91,224,116,.25);transition:transform .15s,box-shadow .2s}
+.sbtn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(91,224,116,.35)}
+.sbtn:disabled{opacity:.6;cursor:wait;transform:none}
+.sbtn.alt{background:transparent;color:var(--green2);box-shadow:none}
+.sbtn svg{width:17px;height:17px;flex:none}
+.sbtn .short{display:none}
+.share-msg{grid-column:1/-1;text-align:center;margin:0;min-height:0}
+.share-msg:empty{display:none}
+@media(max-width:420px){.sbtn{font-size:13px;padding:10px 6px}.sbtn .long{display:none}.sbtn .short{display:inline}}

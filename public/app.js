@@ -499,6 +499,139 @@ function carousel(track, dots, ms, center) {
 }
 carousel($("pts-track"), $("pts-dots"), 2600, true);
 carousel($("series"), $("dots"), 3200, false);
+// ---------- "Share my rank" / "Share my university": a story-size image made right here in the browser ----------
+const loadScript = (src) => new Promise((ok, bad) => {
+  if (window.qrcode) return ok();
+  const sc = document.createElement("script"); sc.src = src; sc.onload = ok; sc.onerror = bad; document.head.appendChild(sc);
+});
+const loadImg = (src) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; });
+const shortNm = (n) => { const p = String(n || "").trim().split(/\s+/).filter(Boolean); if (!p.length) return "";
+  const f = p[0].charAt(0).toUpperCase() + p[0].slice(1).toLowerCase(); return p.length > 1 ? `${f} ${p[p.length - 1].charAt(0).toUpperCase()}.` : f; };
+const fmtNum = (n) => Number(n || 0).toLocaleString("en-US");
+
+function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+// text that shrinks until it fits the width
+function fitText(c, text, x, y, maxW, size, weight) {
+  let s = size; do { c.font = `${weight} ${s}px Poppins, sans-serif`; s -= 2; } while (c.measureText(text).width > maxW && s > 12);
+  c.fillText(text, x, y);
+}
+// letter-spaced line, centred on x
+function spaced(c, text, x, y, gap) {
+  const ws = [...text].map((ch) => c.measureText(ch).width), total = ws.reduce((a, b) => a + b, 0) + gap * (ws.length - 1);
+  let cx = x - total / 2; c.textAlign = "left";
+  [...text].forEach((ch, i) => { c.fillText(ch, cx, y); cx += ws[i] + gap; });
+  c.textAlign = "center"; return total;
+}
+function wrap(c, text, maxW) {
+  const out = []; let line = "";
+  text.split(" ").forEach((w) => { const t = line ? line + " " + w : w; if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; });
+  if (line) out.push(line); return out;
+}
+
+async function drawCard(kind, v) {
+  await Promise.all([document.fonts.load("700 60px Poppins"), document.fonts.load("400 30px Poppins")]).catch(() => {});
+  await loadScript("qrcode.js").catch(() => {});
+  const [logo, logos] = await Promise.all([loadImg("logo.png"), loadImg("logos.png")]);
+  const W = 1080, H = 1920, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const c = cv.getContext("2d"); c.textAlign = "center"; c.textBaseline = "alphabetic";
+  const G = "#5BE074";
+  // background + glow + dots
+  let g = c.createLinearGradient(0, 0, W * 0.5, H); g.addColorStop(0, "#062512"); g.addColorStop(0.5, "#03170b"); g.addColorStop(1, "#010a05");
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  g = c.createRadialGradient(540, 590, 0, 540, 590, 640); g.addColorStop(0, "rgba(57,181,74,.45)"); g.addColorStop(1, "rgba(57,181,74,0)");
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = "rgba(255,255,255,.05)";
+  for (let y = 11; y < H; y += 22) for (let x = 11; x < W; x += 22) c.fillRect(x, y, 2, 2);
+  // logo pill
+  if (logo) { const lh = 46, lw = logo.width * lh / logo.height; c.fillStyle = "#fff"; c.shadowColor = "rgba(0,0,0,.4)"; c.shadowBlur = 30;
+    rrect(c, (W - lw) / 2 - 36, 90, lw + 72, lh + 36, 22); c.fill(); c.shadowBlur = 0; c.drawImage(logo, (W - lw) / 2, 108, lw, lh); }
+  // kicker
+  c.font = "700 30px Poppins, sans-serif"; c.fillStyle = G;
+  const kw = spaced(c, v.kick, 552, 296, 10);
+  c.beginPath(); c.arc(552 - kw / 2 - 24, 286, 7, 0, 7); c.fill();
+  // ring with the rank
+  const cx = 540, cy = 582, R = 232;
+  c.save(); c.shadowColor = "rgba(91,224,116,.55)"; c.shadowBlur = 80;
+  g = c.createConicGradient ? c.createConicGradient(3.5, cx, cy) : c.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+  [[0, G], [0.35, "#b6ffc2"], [0.7, "#2f9e43"], [1, G]].forEach(([o, col]) => g.addColorStop(o, col));
+  c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fillStyle = g; c.fill(); c.restore();
+  g = c.createRadialGradient(cx, cy - 80, 0, cx, cy, R); g.addColorStop(0, "#0f3a20"); g.addColorStop(0.7, "#041a0c"); g.addColorStop(1, "#041a0c");
+  c.beginPath(); c.arc(cx, cy, R - 10, 0, Math.PI * 2); c.fillStyle = g; c.fill();
+  g = c.createLinearGradient(0, cy - 150, 0, cy + 40); g.addColorStop(0, "#e6ffea"); g.addColorStop(0.6, G); g.addColorStop(1, "#2f9e43");
+  c.fillStyle = g; fitText(c, "#" + v.rank, cx, cy + 50, 380, 210, 700);
+  c.fillStyle = "#b9dcc3"; c.font = "400 34px Poppins, sans-serif"; c.fillText(v.of, cx, cy + 112);
+  // name + subtitle
+  c.fillStyle = "#fff"; fitText(c, v.title, 540, 940, 920, 76, 700);
+  c.fillStyle = "#b9dcc3"; fitText(c, v.sub, 540, 1004, 920, 36, 400);
+  // 4 stat boxes
+  v.stats.forEach(([label, val], i) => {
+    const x = 80 + i * 235, y = 1075;
+    rrect(c, x, y, 215, 152, 26); c.fillStyle = "rgba(255,255,255,.04)"; c.fill(); c.strokeStyle = "rgba(91,224,116,.35)"; c.lineWidth = 2; c.stroke();
+    c.fillStyle = "#fff"; fitText(c, fmtNum(val), x + 107, y + 82, 190, 60, 700);
+    c.fillStyle = "#9fcfae"; c.font = "400 22px Poppins, sans-serif"; spaced(c, label.toUpperCase(), x + 107, y + 124, 3);
+  });
+  // invite box with QR (their own invite link, so scans count for them)
+  const by = 1292;
+  rrect(c, 80, by, 920, 270, 32); c.fillStyle = "rgba(91,224,116,.08)"; c.fill();
+  c.setLineDash([10, 8]); c.strokeStyle = "rgba(91,224,116,.5)"; c.lineWidth = 2; c.stroke(); c.setLineDash([]);
+  rrect(c, 116, by + 30, 210, 210, 20); c.fillStyle = "#fff"; c.fill();
+  if (window.qrcode) {
+    const q = qrcode(0, "M"); q.addData(v.link); q.make();
+    const n = q.getModuleCount(), cell = 182 / n; c.fillStyle = "#03140a";
+    for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) c.fillRect(130 + k * cell, by + 44 + r * cell, cell + 0.4, cell + 0.4);
+  }
+  c.textAlign = "left"; c.fillStyle = "#fff"; fitText(c, v.h3, 360, by + 98, 610, 46, 700);
+  c.font = "400 28px Poppins, sans-serif"; c.fillStyle = "#cfe8d6";
+  wrap(c, v.p, 600).forEach((ln, i) => c.fillText(ln, 360, by + 148 + i * 40));
+  c.fillStyle = G; c.font = "700 30px Poppins, sans-serif"; c.fillText(location.host || "powerpaths.pages.dev", 360, by + 148 + wrap(c, v.p, 600).length * 40 + 4);
+  c.textAlign = "center";
+  // date + time it was shared
+  c.fillStyle = "#8fb59b"; c.font = "400 26px Poppins, sans-serif";
+  c.fillText("Ranked on " + new Date().toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Colombo" }) + " · " +
+    new Date().toLocaleString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Colombo" }), 540, 1742);
+  // white footer with the logos
+  c.fillStyle = "#fff"; c.fillRect(0, 1780, W, 140);
+  if (logos) { const s2 = Math.min(1000 / logos.width, 104 / logos.height), lw = logos.width * s2, lh = logos.height * s2; c.drawImage(logos, (W - lw) / 2, 1850 - lh / 2, lw, lh); }
+  return cv;
+}
+
+function cardData(kind) {
+  const d = state.data || {}, me = d.me || {}, link = `${location.origin}${location.pathname}?ref=${me.ref || ""}`;
+  if (kind === "uni") {
+    const unis = d.unis || [], u = unis.find((x) => x.uni === me.uni) || { rank: "–", points: 0, students: 0, answers: 0, joins: 0 };
+    return { kick: "UNIVERSITY RANKING", rank: u.rank, of: `of ${unis.length} universities`, title: me.uni || "", sub: "PowerPaths 2.0 · IEEE PES webinar series",
+      stats: [["Points", u.points], ["Students", u.students], ["Answers", u.answers || 0], ["Joins", u.joins || 0]],
+      h3: u.rank === 1 ? "Help us stay #1!" : "Help us reach #1!", p: "Register, answer the daily quiz and add points for your university at", link,
+      text: `${me.uni} is #${u.rank} on the PowerPaths 2.0 leaderboard! Register and help us climb: ${link}` };
+  }
+  return { kick: "MY POWERPATHS RANK", rank: me.rank, of: `of ${me.of} students`, title: shortNm(me.name), sub: me.uni || "",
+    stats: [["Points", me.points], ["Answers", me.answers], ["Invites", me.visits], ["Joins", me.joins || 0]],
+    h3: "Can you beat my rank?", p: "Scan, answer the daily quiz and climb the leaderboard at", link,
+    text: `I'm #${me.rank} on the PowerPaths 2.0 leaderboard! Can you beat my rank? ${link}` };
+}
+
+async function shareCard(kind, btn) {
+  const msg = $("share-msg"), label = btn.innerHTML;
+  btn.disabled = true; msg.textContent = "Making your card…";
+  try {
+    const v = cardData(kind), cv = await drawCard(kind, v);
+    const blob = await new Promise((ok) => cv.toBlob(ok, "image/png"));
+    const file = new File([blob], `powerpaths-${kind === "uni" ? "university" : "my"}-rank.png`, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], text: v.text }); msg.textContent = ""; }
+      catch (e) { msg.textContent = e && e.name === "AbortError" ? "" : "Couldn't open sharing. Try again."; }
+    } else {                                    // desktop: download the picture
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file.name;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      msg.textContent = "✓ Card downloaded. Post it on your WhatsApp status or Instagram story!";
+    }
+  } catch (e) { msg.textContent = "Couldn't make the card. Please try again."; }
+  btn.disabled = false; btn.innerHTML = label;
+}
+$("share-me").addEventListener("click", (e) => shareCard("me", e.currentTarget));
+$("share-uni").addEventListener("click", (e) => shareCard("uni", e.currentTarget));
+window.__ppCard = (kind) => drawCard(kind, cardData(kind)).then((cv) => cv.toDataURL("image/png"));   // used by the preview script
+
 // Opened through someone's invite link → tell the server (counted once per phone)
 if (state.ref) post({ a: "visit", ref: state.ref, t: state.token || "" }).catch(() => {});
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
