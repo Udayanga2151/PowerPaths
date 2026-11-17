@@ -36,7 +36,19 @@
     <section id="qsec">
       <h2 class="title">💡 Today's Questions</h2>
       <p class="mute small">Answer today's quick quiz (you'll see the right answer straight away) and ask the resource person your own question. The best questions are picked for the live webinar.</p>
-      <details class="rules"><summary>How do I get points?</summary><ul id="rules"></ul></details>
+      <div class="pts" aria-label="How to get points">
+        <p class="pts-h">How to get points</p>
+        <div class="pts-track beam-track" id="pts-track" aria-roledescription="carousel" aria-label="Ways to get points">
+          <div class="pt beam pt-register"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></i><b>+<span data-p="register">10</span></b><span>Register</span><small>once, for joining PowerPaths</small></div>
+          <div class="pt beam pt-quiz"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg></i><b>+<span data-p="pollMax">5</span></b><span>Quiz answer</span><small><span data-p="poll">2</span> for answering, +<span data-p="pollCorrect">3</span> if right</small></div>
+          <div class="pt beam pt-ask"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 8v3M12 14h.01"/></svg></i><b>+<span data-p="askMax">23</span></b><span>Ask a question</span><small><span data-p="ask">3</span> for asking, +<span data-p="askPicked">20</span> if picked</small></div>
+          <div class="pt beam pt-invite"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></i><b>+<span data-p="visit">1</span></b><span>Invite</span><small>each person who opens your link</small></div>
+          <div class="pt beam pt-join"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></i><b>+<span data-p="join">10</span></b><span>Joined</span><small>each invited friend who registers</small></div>
+        </div>
+        <div class="dots" id="pts-dots" aria-label="Choose a card"></div>
+        <p class="pts-ex"><b>Example:</b> register 10 + 3 right quiz answers 15 + 1 question 3 + 5 invites 5 + 2 joined 20 = <b class="g">53 points</b></p>
+        <p class="pts-note">Your university's score is the total of all its students. Spam or off-topic questions get 0 points.</p>
+      </div>
       <div id="results"></div>
       <div id="questions"><div class="card skeleton">Loading…</div></div>
     </section>
@@ -58,6 +70,7 @@
           <div><b id="me-points">0</b><span>points</span></div>
           <div><b id="me-refs">0</b><span>invites</span></div>
           <div><b id="me-ans">0</b><span>answers</span></div>
+          <div><b id="me-joins">0</b><span>joins</span></div>
         </div>
       </div>
       <div class="tabs" role="tablist">
@@ -73,16 +86,16 @@
       <h2 class="title">⚡ The Series</h2>
       <p class="mute">Under the new Electricity Act, the CEB is being restructured into four separate entities. Each webinar takes one of them, with an industry expert explaining how it works and what it means for the next generation of engineers.</p>
       <div class="webinars" id="series" aria-roledescription="carousel" aria-label="The four webinars">
-        <article class="w live"><div class="wtop"><span class="num">01</span><span class="date">Postponed</span></div>
+        <article class="w beam live"><div class="wtop"><span class="num">01</span><span class="date">Postponed</span></div>
           <span class="abbr">EGL</span><h3>Electricity Generation Lanka</h3>
           <p>How Sri Lanka produces its electricity: hydro, thermal and the fast-growing renewables, and the role of generation companies in the new structure.</p></article>
-        <article class="w"><div class="wtop"><span class="num">02</span><span class="date">Date TBA</span></div>
+        <article class="w beam"><div class="wtop"><span class="num">02</span><span class="date">Date TBA</span></div>
           <span class="abbr">NTNSP</span><h3>National Transmission Network Service Provider</h3>
           <p>The high-voltage backbone that carries power from the plants across the country, and how it must grow for a renewable future.</p></article>
-        <article class="w"><div class="wtop"><span class="num">03</span><span class="date">Date TBA</span></div>
+        <article class="w beam"><div class="wtop"><span class="num">03</span><span class="date">Date TBA</span></div>
           <span class="abbr">EDL</span><h3>Electricity Distribution Lanka</h3>
           <p>From the substation to homes and industries: how power reaches every customer, and how rooftop solar is changing the network.</p></article>
-        <article class="w"><div class="wtop"><span class="num">04</span><span class="date">Date TBA</span></div>
+        <article class="w beam"><div class="wtop"><span class="num">04</span><span class="date">Date TBA</span></div>
           <span class="abbr">NSO</span><h3>National System Operator</h3>
           <p>The control room of the nation: balancing supply and demand every second to keep the whole grid stable.</p></article>
       </div>

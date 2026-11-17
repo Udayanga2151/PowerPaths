@@ -339,7 +339,7 @@ function renderMe(d) {
     $("hello").textContent = `👋 Hi ${me.name} · #${me.rank} of ${me.of}`;
     $("hello").classList.remove("hidden");
     $("me-rank").textContent = "#" + me.rank; $("me-of").textContent = ` of ${me.of}`;
-    $("me-points").textContent = me.points; $("me-refs").textContent = me.visits; $("me-ans").textContent = me.answers;
+    $("me-points").textContent = me.points; $("me-refs").textContent = me.visits; $("me-ans").textContent = me.answers; $("me-joins").textContent = me.joins || 0;
     $("me-card").classList.remove("hidden");
     const link = `${location.origin}${location.pathname}?ref=${me.ref}`;
     $("ref-link").value = link;
@@ -359,15 +359,11 @@ function renderBoard(d) {
   st.innerHTML = ""; un.innerHTML = "";
   if (!d.top.length) st.innerHTML = `<li class="mute small">No points yet. Answer today's question and be the first! 🚀</li>`;
   d.top.forEach((r) => st.appendChild(li(r.rank, r.name, `${r.uni} · ${r.answers} answers · ${r.visits} invites · ${r.joins} joined`, r.points)));
-  d.unis.forEach((u) => un.appendChild(li(u.rank, u.uni, `${u.students} registered`, u.points)));
+  d.unis.forEach((u) => un.appendChild(li(u.rank, u.uni, `${u.students} registered · ${u.answers || 0} answers · ${u.visits || 0} invites · ${u.joins || 0} joined`, u.points)));
   const P = d.points;
-  $("rules").innerHTML = `<li>Register for PowerPaths: <b>${P.register}</b></li>
-    <li>Answer a quiz question: <b>${P.poll}</b> (+${P.pollCorrect} more if you're right)</li>
-    <li>Ask the resource person a question: <b>${P.ask}</b> (+${P.askPicked} if it's picked for the webinar)</li>
-    <li>Each person who opens your invite link: <b>${P.visit}</b></li>
-    <li>…and if they then register for PowerPaths: <b>+${P.join}</b> more</li>
-    <li>Your university's score is the total of all its students.</li>
-    <li>Spam or off-topic questions get no points.</li>`;
+  // keep the points cards in step with the server's numbers (the HTML already has the defaults, so they show at once)
+  const v = { ...P, pollMax: P.poll + P.pollCorrect, askMax: P.ask + P.askPicked };
+  document.querySelectorAll("[data-p]").forEach((e) => { if (v[e.dataset.p] !== undefined) e.textContent = v[e.dataset.p]; });
   const sel = $("uni-select");
   sel.innerHTML = `<option value="">Select…</option>` + d.unisList.map((u) => `<option></option>`).join("") + `<option value="__other">Other</option>`;
   d.unisList.forEach((u, i) => { sel.options[i + 1].value = u; sel.options[i + 1].textContent = u; });
@@ -409,35 +405,42 @@ async function refresh(first) {
 showCached();
 refresh(true);
 
-// ---------- "The Series" carousel: auto-slides every 4 s, stops while someone touches it ----------
-(function carousel() {
-  const track = $("series"), dots = $("dots");
+// ---------- carousels ("How to get points" + "The Series") ----------
+// Auto-slides; the active card pops up with a green light running round it.
+// Stops while the mouse is over it, or for 8 s after someone touches / swipes it.
+function carousel(track, dots, ms, center) {
   if (!track) return;
   const cards = [...track.children];
-  const perView = () => (track.clientWidth >= 560 ? 2 : 1);
-  const pages = () => Math.max(1, cards.length - perView() + 1);
-  const current = () => Math.round(track.scrollLeft / (cards[0].offsetWidth + 12));
-  const go = (i) => track.scrollTo({ left: i * (cards[0].offsetWidth + 12), behavior: "smooth" });
-  function drawDots() {
+  let idx = 0, timer = null, resume = null, auto = false;
+  const left = (i) => center ? cards[i].offsetLeft - (track.clientWidth - cards[i].offsetWidth) / 2 : cards[i].offsetLeft - 4;
+  const show = (i, scroll = true) => {
+    idx = (i + cards.length) % cards.length;
+    cards.forEach((c, k) => c.classList.toggle("on", k === idx));
+    if (dots) [...dots.children].forEach((b, k) => b.classList.toggle("on", k === idx));
+    if (scroll) { auto = true; track.scrollTo({ left: left(idx), behavior: "smooth" }); setTimeout(() => (auto = false), 700); }
+  };
+  if (dots) {
     dots.innerHTML = "";
-    for (let i = 0; i < pages(); i++) {
-      const b = document.createElement("button");
-      b.setAttribute("aria-label", `Webinar ${i + 1}`);
-      b.onclick = () => { go(i); pause(); };
-      dots.appendChild(b);
-    }
-    mark();
+    cards.forEach((_, k) => { const b = document.createElement("button"); b.setAttribute("aria-label", `Card ${k + 1}`); b.onclick = () => { show(k); pause(); }; dots.appendChild(b); });
   }
-  const mark = () => [...dots.children].forEach((b, i) => b.classList.toggle("on", i === Math.min(current(), pages() - 1)));
-  let timer = null, resume = null;
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const start = () => { if (!reduce && !timer) timer = setInterval(() => go((current() + 1) % pages()), 4000); };
-  const pause = () => { clearInterval(timer); timer = null; clearTimeout(resume); resume = setTimeout(start, 10000); };
-  track.addEventListener("scroll", () => requestAnimationFrame(mark), { passive: true });
+  const start = () => { if (!reduce && !timer) timer = setInterval(() => show(idx + 1), ms); };
+  const stop = () => { clearInterval(timer); timer = null; clearTimeout(resume); };
+  const pause = () => { stop(); resume = setTimeout(start, 8000); };
+  // a swipe by hand: the card nearest the middle (or left edge) becomes the active one
+  track.addEventListener("scroll", () => {
+    if (auto) return;
+    const pos = track.scrollLeft; let best = 0;
+    cards.forEach((_, k) => { if (Math.abs(left(k) - pos) < Math.abs(left(best) - pos)) best = k; });
+    if (best !== idx) show(best, false);
+  }, { passive: true });
   ["pointerdown", "touchstart", "wheel", "focusin"].forEach((e) => track.addEventListener(e, pause, { passive: true }));
-  window.addEventListener("resize", drawDots);
-  drawDots(); start();
-})();
+  track.addEventListener("mouseenter", stop);
+  track.addEventListener("mouseleave", () => { clearTimeout(resume); start(); });
+  show(0, false); start();
+}
+carousel($("pts-track"), $("pts-dots"), 2600, true);
+carousel($("series"), $("dots"), 3200, false);
 // Opened through someone's invite link → tell the server (counted once per phone)
 if (state.ref) post({ a: "visit", ref: state.ref, t: state.token || "" }).catch(() => {});
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
