@@ -63,7 +63,7 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .ranks .who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ranks .who span{font-size:12px;color:var(--mute)}
 .ranks .pts{font-weight:700;flex:none}
-.ranks li.t1{border-color:var(--gold)}.ranks li.t2{border-color:#c9d1d6}.ranks li.t3{border-color:#c98a4d}
+.ranks li.t1,.ranks li.t2,.ranks li.t3{border-color:rgba(255,255,255,.14)}
 /* webinars */
 /* carousel: one card at a time on phones, two on wide screens; swipe or auto-slide */
 .webinars{display:flex;gap:12px;margin:6px 0 0;padding:10px 4px 12px;position:relative;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -95,10 +95,10 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 @media(min-width:620px){.sheet{align-items:center}.sheet-box{border-radius:22px}}
 .sheet-box label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
 .sheet-box.center{text-align:center}
-.x{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--mute);font-size:18px;cursor:pointer}
+.x{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--mute);cursor:pointer;padding:4px;display:grid;place-items:center}.x .ic{width:20px;height:20px;margin:0}
 .note{font-size:14px;background:rgba(57,181,74,.12);border:1px solid rgba(57,181,74,.35);border-radius:12px;padding:10px;margin:4px 0}
 .privacy{font-size:12px;color:var(--mute);text-align:center}
-.bigemoji{font-size:44px}
+.bigemoji{display:grid;place-items:center}.bigemoji .ic.big{width:56px;height:56px;color:var(--green2);margin:0}
 /* question types */
 .q-ask{border-color:rgba(91,224,116,.25)}
 .q-ask textarea{min-height:80px}
@@ -193,11 +193,6 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .ranks .podium{display:grid;grid-template-columns:1fr 1.12fr 1fr;align-items:end;gap:8px;background:none;border:0;padding:6px 0 4px}
 .pod{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 8px 12px}
 .pod.mid{padding-top:22px;padding-bottom:20px}
-.pod.r1{border-color:var(--gold);background:linear-gradient(180deg,rgba(227,195,77,.16),var(--panel) 60%);box-shadow:0 0 26px rgba(227,195,77,.14)}
-.pod.r2{border-color:#c9d1d6;background:linear-gradient(180deg,rgba(201,209,214,.12),var(--panel) 60%)}
-.pod.r3{border-color:#c98a4d;background:linear-gradient(180deg,rgba(201,138,77,.14),var(--panel) 60%)}
-.pod .medal{font-size:28px;line-height:1}
-.pod.mid .medal{font-size:36px}
 .pod .nm{margin-top:6px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pod .un{font-size:11.5px;color:var(--mute);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
 .pod .pp{margin-top:6px;font-size:18px;color:var(--green2)}
@@ -229,3 +224,31 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--green);outline-o
 .share-msg{grid-column:1/-1;text-align:center;margin:0;min-height:0}
 .share-msg:empty{display:none}
 @media(max-width:420px){.sbtn{font-size:13px;padding:10px 6px}.sbtn .long{display:none}.sbtn .short{display:inline}}
+
+/* vector icons (replace emoji) */
+.ic{width:1.05em;height:1.05em;vertical-align:-.17em;margin-right:.4em;flex:none;stroke-width:2}
+.title{display:flex;align-items:center;gap:10px}
+.ti-ico{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;color:var(--green2);background:linear-gradient(160deg,rgba(91,224,116,.22),rgba(91,224,116,.06));border:1px solid rgba(91,224,116,.45);box-shadow:0 0 14px rgba(91,224,116,.15)}
+.ti-ico .ic{width:18px;height:18px;margin:0}
+.next .ic,.privacy .ic{color:var(--green2)}
+.q .tag .ic,.result .tag .ic{width:14px;height:14px;vertical-align:-.2em}
+.msg .ic{width:15px;height:15px;vertical-align:-.22em}
+.msg.bad .ic{color:var(--red)}
+
+/* rank badges: metal hexagons */
+.badge{display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+.badge text{font:700 20px Poppins,sans-serif;fill:#1b1405}
+.badge.silver text{fill:#1d2328}.badge.bronze text{fill:#2a1405}
+.badge.lg{width:54px;height:58px}.badge.md{width:44px;height:48px}.badge.sm{width:30px;height:33px;margin:0 auto}
+.badge.gold{filter:drop-shadow(0 0 12px rgba(242,201,76,.45)) drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+.rk{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;font-size:13px;font-weight:700;color:var(--green2);border:1.5px solid rgba(91,224,116,.45);background:rgba(91,224,116,.08)}
+
+/* podium cards: dark glass, metal strip on top, soft metal light */
+.pod{--m:#F2C94C;--mg:rgba(242,201,76,.16);background:linear-gradient(180deg,var(--mg),rgba(255,255,255,.02) 55%),var(--panel);border:1px solid rgba(255,255,255,.12);border-radius:18px}
+.pod.r2{--m:#C9D3DA;--mg:rgba(201,211,218,.12)}
+.pod.r3{--m:#D88A4E;--mg:rgba(216,138,78,.14)}
+.pod::before{content:"";position:absolute;left:18%;right:18%;top:-1px;height:3px;border-radius:0 0 4px 4px;background:var(--m);box-shadow:0 0 14px var(--m)}
+.pod .medal{display:grid;place-items:center;line-height:0}
+.pod.mid{box-shadow:0 18px 40px rgba(0,0,0,.35),0 0 30px var(--mg)}
+.pod .pp{color:#fff}.pod.r1 .pp{color:#F7D774}
+.pod.me-row{border-color:var(--green2)}

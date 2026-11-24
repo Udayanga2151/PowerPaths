@@ -38,9 +38,9 @@ async function post(body) {
 // QUIZ card: polls (+ opinions) share ONE "Submit my answers" button. Answered once, then locked, and polls show ✓ / ✗ right away.
 // ASK card: "Ask the expert" questions have their own button and can be edited.
 const KIND = {
-  poll: { tag: "📊 Quick quiz" },
-  opinion: { tag: "💡 Your opinion", ph: "Your idea…" },
-  ask: { tag: "🎤 Ask the expert", ph: "Your question for the resource person…" },
+  poll: { tag: "Quick quiz", ico: "chart" },
+  opinion: { tag: "Your opinion", ico: "bulb", ph: "Your idea…" },
+  ask: { tag: "Ask the expert", ico: "mic", ph: "Your question for the resource person…" },
 };
 const minFor = (q, d) => (q.type === "ask" ? d.minLenAsk || 10 : d.minLen);
 const saved = {};   // what is already saved for each question
@@ -56,6 +56,7 @@ function questionBlock(q, d) {
   let tag = K.tag + (q.webinar ? ` · Webinar ${String(q.webinar).padStart(2, "0")}` : "");
   if (q.closes) tag += " · Closes " + fmtClose(q.closes);
   el.querySelector(".tag").textContent = tag;
+  el.querySelector(".tag").insertAdjacentHTML("afterbegin", ico(K.ico));
   el.querySelector(".text").textContent = q.text;
   const field = el.querySelector(".field"), msg = el.querySelector(".msg");
   const mine = d.myAnswers && d.myAnswers[q.id];
@@ -82,7 +83,7 @@ function questionBlock(q, d) {
     cnt.className = "count";
     field.append(ta, cnt);
     const min = minFor(q, d);
-    const upd = () => (cnt.textContent = `${ta.value.trim().length} / ${d.maxLen}` + (ta.value.trim().length < min ? ` (min ${min})` : "") + (type === "ask" ? " · 🔒 only the team sees it" : ""));
+    const upd = () => (cnt.textContent = `${ta.value.trim().length} / ${d.maxLen}` + (ta.value.trim().length < min ? ` (min ${min})` : "") + (type === "ask" ? " · only the team sees it" : ""));
     ta.addEventListener("input", upd); upd();
     it.get = () => ta.value.trim();
     it.lock = () => { it.locked = true; ta.readOnly = true; cnt.remove(); el.classList.add("locked"); msg.className = "msg ok"; msg.textContent = "✓ Submitted"; };
@@ -110,7 +111,8 @@ function showResult(it, answer, correct, animate) {
   it.el.classList.toggle("animate", !!animate);
   const ok = correct && String(answer).toLowerCase() === correct.toLowerCase();
   it.msg.className = "msg " + (correct ? (ok ? "ok" : "bad") : "ok");
-  it.msg.textContent = !correct ? "✓ Vote saved" : ok ? "✅ Correct! Well done" : `❌ Not quite. The right answer is ${correct}`;
+  it.msg.textContent = !correct ? "Vote saved" : ok ? "Correct! Well done" : `Not quite. The right answer is ${correct}`;
+  it.msg.insertAdjacentHTML("afterbegin", ico(!correct || ok ? "check" : "x"));
   return ok;
 }
 
@@ -119,7 +121,7 @@ function renderQuestions(d) {
   box.innerHTML = "";
   renderClosedPolls(d);
   if (!d.questions.length) {
-    box.innerHTML = `<div class="card mute small">No open question right now. A new one is coming soon, so watch the WhatsApp community! 👀</div>`;
+    box.innerHTML = `<div class="card mute small">No open question right now. A new one is coming soon, so watch the WhatsApp community!</div>`;
     return;
   }
   const quiz = d.questions.filter(isQuiz).sort((a, b) => (a.type === "poll" ? 0 : 1) - (b.type === "poll" ? 0 : 1));
@@ -162,7 +164,7 @@ function summary(job, d, animate) {
   const right = polls.filter((it) => it.el.querySelector(".opt.right")).length;
   job.msg.className = "msg score";
   const bonus = right * (d.points.pollCorrect || 0);
-  job.msg.textContent = right === polls.length ? `🏆 ${right} / ${polls.length} correct! +${bonus} bonus points` : right ? `You got ${right} / ${polls.length} right · +${bonus} bonus points` : `0 / ${polls.length} this time. Come back tomorrow for new questions! 💪`;
+  job.msg.textContent = right === polls.length ? `${right} / ${polls.length} correct! +${bonus} bonus points` : right ? `You got ${right} / ${polls.length} right · +${bonus} bonus points` : `0 / ${polls.length} this time. Come back tomorrow for new questions! 💪`;
   if (animate && right === polls.length) celebrate(job.card);
 }
 
@@ -172,7 +174,7 @@ function celebrate(card) {
   burst.className = "burst";
   for (let i = 0; i < 18; i++) {
     const s = document.createElement("i");
-    s.textContent = i % 3 ? "✦" : "⚡";
+    s.textContent = "✦";
     s.style.setProperty("--a", (i * 20) + "deg");
     s.style.setProperty("--d", 60 + (i % 4) * 22 + "px");
     burst.appendChild(s);
@@ -264,13 +266,13 @@ function renderClosedPolls(d) {
     const mine = d.myAnswers && d.myAnswers[p.id];
     const el = document.createElement("div");
     el.className = "result";
-    el.innerHTML = `<span class="tag">✅ Yesterday's quiz</span><p class="text"></p><p class="ans">Correct answer: <b></b></p><p class="you"></p>`;
+    el.innerHTML = `<span class="tag">${ico("check")}Yesterday's quiz</span><p class="text"></p><p class="ans">Correct answer: <b></b></p><p class="you"></p>`;
     el.querySelector(".text").textContent = p.text;
     el.querySelector(".ans b").textContent = p.correct;
     const you = el.querySelector(".you");
     if (mine) {
       const right = mine.toLowerCase() === p.correct.toLowerCase();
-      you.textContent = right ? `You answered ${mine}. Well done! 🎉` : `You answered ${mine}.`;
+      you.textContent = right ? `You answered ${mine}. Well done!` : `You answered ${mine}.`;
       you.className = "you " + (right ? "right" : "wrong");
     } else you.remove();
     box.appendChild(el);
@@ -322,11 +324,22 @@ $("idform").onsubmit = async (ev) => {
 };
 
 // ---------- invite + leaderboard ----------
+// vector icons (from the sprite in index.html) and rank badges, instead of emoji
+const ico = (n, c = "ic") => n ? `<svg class="${c}" aria-hidden="true"><use href="#i-${n}"/></svg>` : "";
+// 1st / 2nd / 3rd: a metal hexagon badge with the number; colour by rank so ties share it
+function badge(rank, size) {
+  const m = ["gold", "silver", "bronze"][rank - 1];
+  if (!m) return `<span class="rk">${rank}</span>`;
+  return `<svg class="badge ${size} ${m}" viewBox="0 0 48 52" aria-label="Rank ${rank}"><path class="hex" d="M24 2 44 13.5v25L24 50 4 38.5v-25z" fill="url(#g-${m})"/>` +
+    `<path d="M24 7.5 39.5 16.5v19L24 44.5 8.5 35.5v-19z" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.2"/>` +
+    `<text x="24" y="32.5" text-anchor="middle">${rank}</text></svg>`;
+}
+
 function li(rank, title, sub, pts) {
   const el = document.createElement("li");
   if (rank <= 3) el.className = "t" + rank;
   el.innerHTML = `<span class="r"></span><span class="who"><b></b><span></span></span><span class="pts"></span>`;
-  el.querySelector(".r").textContent = ["🥇", "🥈", "🥉"][rank - 1] || rank;
+  if (rank <= 3) el.querySelector(".r").innerHTML = badge(rank, "sm"); else el.querySelector(".r").innerHTML = `<span class="rk">${rank}</span>`;
   el.querySelector(".who b").textContent = title;
   el.querySelector(".who span").textContent = sub;
   el.querySelector(".pts").textContent = pts + " pts";
@@ -376,7 +389,7 @@ function podium(rows, me) {
     const p = document.createElement("div");
     p.className = "pod r" + r.rank + (i === 0 ? " mid" : "") + (isMe(r, me) ? " me-row" : "");  // colour by rank (ties share it), centre one is taller
     p.innerHTML = `<span class="medal"></span><b class="nm"></b><span class="un"></span><strong class="pp"><span>0</span> pts</strong><small></small><em class="you">You</em>`;
-    p.querySelector(".medal").textContent = ["🥇", "🥈", "🥉"][r.rank - 1] || "#" + r.rank;
+    p.querySelector(".medal").innerHTML = badge(r.rank, i === 0 ? "lg" : "md");
     p.querySelector(".nm").textContent = r.name;
     p.querySelector(".un").textContent = r.uni;
     p.querySelector("small").textContent = `${r.answers} answers · ${r.visits} invites · ${r.joins} joined`;
@@ -389,7 +402,7 @@ function podium(rows, me) {
 function renderMe(d) {
   const me = d.me;
   if (me && me.registered) {
-    $("hello").textContent = `👋 Hi ${me.name} · #${me.rank} of ${me.of}`;
+    $("hello").textContent = `Hi ${me.name} · #${me.rank} of ${me.of}`; $("hello").insertAdjacentHTML("afterbegin", ico("user"));
     $("hello").classList.remove("hidden");
     countUp($("me-rank"), me.rank, { from: me.of, prefix: "#" }); $("me-of").textContent = ` of ${me.of}`;
     countUp($("me-points"), me.points); countUp($("me-refs"), me.visits); countUp($("me-ans"), me.answers); countUp($("me-joins"), me.joins || 0);
@@ -399,10 +412,10 @@ function renderMe(d) {
     $("ref-pts").textContent = d.points.visit;
     $("join-pts").textContent = d.points.join;
     $("wa-share").href = "https://wa.me/?text=" + encodeURIComponent(
-      `⚡ PowerPaths 2.0: a free IEEE PES webinar series on the future of Sri Lanka's electricity sector. Register and answer the daily question with me!\n${link}`);
+      `PowerPaths 2.0: a free IEEE PES webinar series on the future of Sri Lanka's electricity sector. Register and answer the daily question with me!\n${link}`);
     $("invite").classList.remove("hidden");
   } else if (me && !me.registered) {
-    $("hello").textContent = "👋 Welcome back! Register to get on the leaderboard";
+    $("hello").textContent = "Welcome back! Register to get on the leaderboard"; $("hello").insertAdjacentHTML("afterbegin", ico("user"));
     $("hello").classList.remove("hidden");
   }
 }
@@ -410,7 +423,7 @@ function renderMe(d) {
 function renderBoard(d) {
   const st = $("students"), un = $("unis");
   st.innerHTML = ""; un.innerHTML = "";
-  if (!d.top.length) st.innerHTML = `<li class="mute small">No points yet. Answer today's question and be the first! 🚀</li>`;
+  if (!d.top.length) st.innerHTML = `<li class="mute small">No points yet. Answer today's question and be the first!</li>`;
   if (d.top.length >= 3) st.appendChild(podium(d.top, d.me));
   d.top.slice(d.top.length >= 3 ? 3 : 0).forEach((r) => {
     const row = li(r.rank, r.name, `${r.uni} · ${r.answers} answers · ${r.visits} invites · ${r.joins} joined`, r.points);
